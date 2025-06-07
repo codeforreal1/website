@@ -1,49 +1,126 @@
 ---
-import BaseHead from '../components/BaseHead.astro';
-import Header from '../components/Header.astro';
-import Footer from '../components/Footer.astro';
-import { SITE_TITLE, SITE_DESCRIPTION } from '../consts';
+import { getCollection } from "astro:content";
+import BaseHead from "../components/BaseHead.astro";
+import Header from "../components/Header.astro";
+import Footer from "../components/Footer.astro";
+import { SITE_TITLE, SITE_DESCRIPTION } from "../consts";
+import Image from "astro/components/Image.astro";
+import CodeForRealImage from "../assets/codeforreal.png";
+import BlogPostCard from "../components/blog/BlogPostCard.astro";
+
+const recentBlogPosts = (await getCollection("blogs"))
+  .slice(0, 10)
+  .sort(
+    (a, b) => b.data.publishedDate.valueOf() - a.data.publishedDate.valueOf()
+  );
 ---
 
 <!doctype html>
 <html lang="en">
-	<head>
-		<BaseHead title={SITE_TITLE} description={SITE_DESCRIPTION} />
-	</head>
-	<body>
-		<Header />
-		<main>
-			<h1>🧑‍🚀 Hello, Astronaut!</h1>
-			<p>
-				Welcome to the official <a href="https://astro.build/">Astro</a> blog starter template. This
-				template serves as a lightweight, minimally-styled starting point for anyone looking to build
-				a personal website, blog, or portfolio with Astro.
-			</p>
-			<p>
-				This template comes with a few integrations already configured in your
-				<code>astro.config.mjs</code> file. You can customize your setup with
-				<a href="https://astro.build/integrations">Astro Integrations</a> to add tools like Tailwind,
-				React, or Vue to your project.
-			</p>
-			<p>Here are a few ideas on how to get started with the template:</p>
-			<ul>
-				<li>Edit this page in <code>src/pages/index.astro</code></li>
-				<li>Edit the site header items in <code>src/components/Header.astro</code></li>
-				<li>Add your name to the footer in <code>src/components/Footer.astro</code></li>
-				<li>Check out the included blog posts in <code>src/content/blog/</code></li>
-				<li>Customize the blog post page layout in <code>src/layouts/BlogPost.astro</code></li>
-			</ul>
-			<p>
-				Have fun! If you get stuck, remember to
-				<a href="https://docs.astro.build/">read the docs</a>
-				or <a href="https://astro.build/chat">join us on Discord</a> to ask questions.
-			</p>
-			<p>
-				Looking for a blog template with a bit more personality? Check out
-				<a href="https://github.com/Charca/astro-blog-template">astro-blog-template</a>
-				by <a href="https://twitter.com/Charca">Maxi Ferreira</a>.
-			</p>
-		</main>
-		<Footer />
-	</body>
+  <head>
+    <BaseHead title={SITE_TITLE} description={SITE_DESCRIPTION} />
+  </head>
+  <body>
+    <Header />
+    <main>
+      <div
+        class="flex flex-col-reverse justify-center items-center md:flex-row md:justify-between mt-10"
+      >
+        <div>
+          <h1 class="text-center md:text-left">👋 Hey there!</h1>
+          <p class="md:mr-[5rem] text-center md:text-left px-10 md:px-0">
+            Welcome! I'm a Senior Software Engineer by day and side-project
+            tinkerer by night. I'm a technology nerd and I share all of my
+            learnings on <a
+              href="https://www.threads.com/@codeforreal"
+              target="_blank">Threads</a
+            >
+          </p>
+        </div>
+        <Image
+          src={CodeForRealImage}
+          alt="codeforreal"
+          class="w-[120px] h-[120px] md:w-[150px] md:h-[150px] object-contain mb-6 md:mb-0"
+        />
+      </div>
+      <div class="mt-10">
+        <h5 class="font-bold">Skills:</h5>
+        <div class="flex items-center gap-2 flex-wrap">
+          <div class="skill-tag">TypeScript</div>
+          <div class="skill-tag">Node.js</div>
+          <div class="skill-tag">Python</div>
+          <div class="skill-tag">Golang</div>
+          <div class="skill-tag">Rust</div>
+          <div class="skill-tag">React</div>
+          <div class="skill-tag">Next.js</div>
+          <div class="skill-tag">Nest.js</div>
+          <div class="skill-tag">React Native/Expo</div>
+          <div class="skill-tag">GraphQL</div>
+          <div class="skill-tag">PostgreSQL</div>
+          <div class="skill-tag">Docker</div>
+          <div class="skill-tag">Open-Source</div>
+        </div>
+      </div>
+      <div class="mt-10">
+        <h5 class="font-bold">
+          Latest Blogs: <a href="/blogs" class="text-sm ml-4 font-normal"
+            >View All <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              class="inline-block"
+              ><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g
+                id="SVGRepo_tracerCarrier"
+                stroke-linecap="round"
+                stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier">
+                <path
+                  d="M6 12H18M18 12L13 7M18 12L13 17"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"></path>
+              </g></svg
+            ></a
+          >
+        </h5>
+        <div>
+          <ul class="grid grid-cols-2 gap-4">
+            {
+              recentBlogPosts.map((post) => (
+                <li>
+                  <a href={`/blogs/${post.id}/`}>
+                    <BlogPostCard
+                      title={post.data.title}
+                      publishedDate={post.data.publishedDate}
+                      heroImage={post.data.heroImage}
+                    />
+                  </a>
+                </li>
+              ))
+            }
+          </ul>
+        </div>
+      </div>
+      <div class="mt-10">
+        <h5 class="font-bold">Open Source Projects:</h5>
+      </div>
+    </main>
+    <Footer />
+  </body>
 </html>
+
+<style>
+  .skill-tag {
+    width: fit-content;
+    font-size: 0.8rem;
+    background-color: #26355d;
+    margin: 0;
+    padding: 0.4rem 0.7rem 0.2rem 0.7rem;
+    line-height: 1rem;
+    border-radius: 0.8rem;
+    color: var(--white);
+    white-space: nowrap;
+  }
+</style>

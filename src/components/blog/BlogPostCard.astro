@@ -1,0 +1,22 @@
+---
+import { Image } from "astro:assets";
+import type { BlogPost } from "../../types/blog";
+import Date from "../Date.astro";
+import FallbackImage from "../../assets/blog-placeholder.jpg";
+
+const { title, publishedDate, heroImage } = Astro.props as BlogPost;
+---
+
+<div>
+  <Image
+    width={720}
+    height={360}
+    src={heroImage! ?? FallbackImage}
+    alt={title}
+    class="w-full"
+  />
+  <h4 class="text-white opacity-85 mt-2! my-0!">{title}</h4>
+  <p class="text-[var(--gray)] m-0! text-sm">
+    <Date date={publishedDate} />
+  </p>
+</div>

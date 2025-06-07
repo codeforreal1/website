@@ -1,5 +1,5 @@
 {
-  "name": "",
+  "name": "codeforreal",
   "type": "module",
   "version": "0.0.1",
   "scripts": {
@@ -12,7 +12,9 @@
     "@astrojs/mdx": "^4.3.0",
     "@astrojs/rss": "^4.0.12",
     "@astrojs/sitemap": "^3.4.1",
+    "@tailwindcss/vite": "^4.1.8",
     "astro": "^5.9.1",
-    "sharp": "^0.34.2"
+    "sharp": "^0.34.2",
+    "tailwindcss": "^4.1.8"
   }
 }
