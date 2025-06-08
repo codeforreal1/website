@@ -7,12 +7,49 @@ import { SITE_TITLE, SITE_DESCRIPTION } from "../consts";
 import Image from "astro/components/Image.astro";
 import CodeForRealImage from "../assets/codeforreal.png";
 import BlogPostCard from "../components/blog/BlogPostCard.astro";
+import type { Project } from "../types/project";
+import CompressOImage from "../assets/compresso.png";
+import UltimateNestjsBoilerplateImage from "../assets/ultimate-nestjs-boilerplate.png";
+import ProjectCard from "../components/ProjectCard.astro";
 
 const recentBlogPosts = (await getCollection("blogs"))
-  .slice(0, 10)
+  .slice(0, 4)
   .sort(
     (a, b) => b.data.publishedDate.valueOf() - a.data.publishedDate.valueOf()
   );
+
+const openSourceProjects: Project[] = [
+  {
+    title: "CompressO",
+    url: "https://github.com/codeforreal1/compressO",
+    description:
+      "CompressO (🔉 pronounced like 'Espresso' ) is a free and open-sourced cross-platform video compression app powered by FFmpeg. Available for Linux, Windows & MacOS.",
+    heroImage: CompressOImage,
+    starsUrl:
+      "https://img.shields.io/github/stars/codeforreal1/CompressO?style=social",
+    tags: ["Rust", "Tauri", "FFmpeg", "TypeScript", "Next.js"],
+  },
+  {
+    title: "Ultimate Nest.js Boilerplate",
+    url: "https://github.com/niraj-khatiwada/ultimate-nestjs-boilerplate",
+    description:
+      "An advanced backend boilerplate created for startups that want to move and build fast. Handles everything from Authentication(Email/Password, OAuth, Magic Link, PassKeys, 2FA, etc.), API (REST, GraphQL, WebSockets), Queues & Task Scheduling, Database, Server & API monitoring using Prometheus & Grafana, Docker & Deployment using GitHub Actions, E2E Testing, Front-end integration, etc.",
+    heroImage: UltimateNestjsBoilerplateImage,
+    starsUrl:
+      "https://img.shields.io/github/stars/niraj-khatiwada/ultimate-nestjs-boilerplate?style=social",
+    tags: [
+      "Node.js",
+      "Nest.js",
+      "React",
+      "PostgreSQL",
+      "Redis",
+      "Docker",
+      "Prometheus",
+      "Grafana",
+      "AWS",
+    ],
+  },
+];
 ---
 
 <!doctype html>
@@ -24,24 +61,58 @@ const recentBlogPosts = (await getCollection("blogs"))
     <Header />
     <main>
       <div
-        class="flex flex-col-reverse justify-center items-center md:flex-row md:justify-between mt-10"
+        class="relative flex flex-col-reverse justify-center items-center md:flex-row md:justify-between mt-10"
       >
         <div>
-          <h1 class="text-center md:text-left">👋 Hey there!</h1>
+          <h1 class="text-center md:text-left">
+            <span class="wave">👋</span> Hey there!
+          </h1>
           <p class="md:mr-[5rem] text-center md:text-left px-10 md:px-0">
-            Welcome! I'm a Senior Software Engineer by day and side-project
-            tinkerer by night. I'm a technology nerd and I share all of my
+            Welcome! I'm a Senior Software Engineer by day 💼 and side-project
+            tinkerer by night 🕸. I'm a technology nerd 🤓 and I share all of my
             learnings on <a
               href="https://www.threads.com/@codeforreal"
               target="_blank">Threads</a
-            >
+            >.
           </p>
         </div>
-        <Image
-          src={CodeForRealImage}
-          alt="codeforreal"
-          class="w-[120px] h-[120px] md:w-[150px] md:h-[150px] object-contain mb-6 md:mb-0"
-        />
+        <div class="relative w-full flex justify-center md:justify-end">
+          <Image
+            src={CodeForRealImage}
+            alt="codeforreal"
+            class="w-[120px] h-[120px] md:w-[150px] md:h-[150px] object-contain mb-6 md:mb-0"
+            loading="eager"
+          />
+          <svg
+            width="714"
+            height="714"
+            viewBox="0 0 714 714"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            class="absolute top-[-30px] md:top-[-50px] right-[50%] translate-x-[50%] md:translate-x-0 md:right-[-50px] w-[180px] h-[180px] md:w-[250px] md:h-[250px] z-[-1]"
+          >
+            <path
+              opacity="0.2"
+              fill-rule="evenodd"
+              clip-rule="evenodd"
+              d="M681.87 0H674.73V32.13H610.47V0H603.33V32.13H539.07V0H531.93V32.13H467.67V0H460.53V32.13H396.27V0H389.13V32.13H324.87V0H317.73V32.13H253.47V0H246.33V32.13H182.07V0H174.93V32.13H110.67V0H103.53V32.13H39.27V0H32.13V32.13H0V39.27H32.13V103.53H0V110.67H32.13V174.93H0V182.07H32.13V246.33H0V253.47H32.13V317.73H0V324.87H32.13V389.13H0V396.27H32.13V460.53H0V467.67H32.13V531.93H0V539.07H32.13V603.33H0V610.47H32.13V674.73H0V681.87H32.13V714H39.27V681.87H103.53V714H110.67V681.87H174.93V714H182.07V681.87H246.33V714H253.47V681.87H317.73V714H324.87V681.87H389.13V714H396.27V681.87H460.53V714H467.67V681.87H531.93V714H539.07V681.87H603.33V714H610.47V681.87H674.73V714H681.87V681.87H714V674.73H681.87V610.47H714V603.33H681.87V539.07H714V531.93H681.87V467.67H714V460.53H681.87V396.27H714V389.13H681.87V324.87H714V317.73H681.87V253.47H714V246.33H681.87V182.07H714V174.93H681.87V110.67H714V103.53H681.87V39.27H714V32.13H681.87V0ZM610.47 103.53H674.73V39.27H610.47V103.53ZM610.47 174.93H674.73V110.67H610.47V174.93ZM610.47 246.33H674.73V182.07H610.47V246.33ZM610.47 317.73H674.73V253.47H610.47V317.73ZM610.47 389.13H674.73V324.87H610.47V389.13ZM610.47 460.53H674.73V396.27H610.47V460.53ZM610.47 531.93H674.73V467.67H610.47V531.93ZM610.47 603.33H674.73V539.07H610.47V603.33ZM610.47 674.73H674.73V610.47H610.47V674.73ZM103.53 610.47H39.27V674.73H103.53V610.47ZM103.53 539.07H39.27V603.33H103.53V539.07ZM103.53 467.67H39.27V531.93H103.53V467.67ZM103.53 396.27H39.27V460.53H103.53V396.27ZM103.53 324.87H39.27V389.13H103.53V324.87ZM103.53 253.47H39.27V317.73H103.53V253.47ZM103.53 182.07H39.27V246.33H103.53V182.07ZM103.53 110.67H39.27V174.93H103.53V110.67ZM103.53 39.27H39.27V103.53H103.53V39.27ZM539.07 103.53H603.33V39.27H539.07V103.53ZM539.07 174.93H603.33V110.67H539.07V174.93ZM539.07 246.33H603.33V182.07H539.07V246.33ZM539.07 317.73H603.33V253.47H539.07V317.73ZM539.07 389.13H603.33V324.87H539.07V389.13ZM539.07 460.53H603.33V396.27H539.07V460.53ZM539.07 531.93H603.33V467.67H539.07V531.93ZM539.07 603.33H603.33V539.07H539.07V603.33ZM174.93 539.07H110.67V603.33H174.93V539.07ZM174.93 467.67H110.67V531.93H174.93V467.67ZM174.93 396.27H110.67V460.53H174.93V396.27ZM174.93 324.87H110.67V389.13H174.93V324.87ZM174.93 253.47H110.67V317.73H174.93V253.47ZM174.93 182.07H110.67V246.33H174.93V182.07ZM174.93 110.67H110.67V174.93H174.93V110.67ZM467.67 174.93H531.93V110.67H467.67V174.93ZM467.67 246.33H531.93V182.07H467.67V246.33ZM467.67 317.73H531.93V253.47H467.67V317.73ZM467.67 389.13H531.93V324.87H467.67V389.13ZM467.67 460.53H531.93V396.27H467.67V460.53ZM467.67 531.93H531.93V467.67H467.67V531.93ZM246.33 467.67H182.07V531.93H246.33V467.67ZM246.33 396.27H182.07V460.53H246.33V396.27ZM246.33 324.87H182.07V389.13H246.33V324.87ZM246.33 253.47H182.07V317.73H246.33V253.47ZM246.33 182.07H182.07V246.33H246.33V182.07ZM396.27 246.33H460.53V182.07H396.27V246.33ZM396.27 317.73H460.53V253.47H396.27V317.73ZM396.27 389.13H460.53V324.87H396.27V389.13ZM396.27 460.53H460.53V396.27H396.27V460.53ZM317.73 396.27H253.47V460.53H317.73V396.27ZM317.73 324.87H253.47V389.13H317.73V324.87ZM317.73 253.47H253.47V317.73H317.73V253.47ZM324.87 317.73H389.13V253.47H324.87V317.73ZM324.87 389.13H389.13V324.87H324.87V389.13ZM389.13 396.27H324.87V460.53H389.13V396.27ZM324.87 246.33H389.13V182.07H324.87V246.33ZM253.47 246.33H317.73V182.07H253.47V246.33ZM317.73 467.67H253.47V531.93H317.73V467.67ZM389.13 467.67H324.87V531.93H389.13V467.67ZM460.53 467.67H396.27V531.93H460.53V467.67ZM396.27 174.93H460.53V110.67H396.27V174.93ZM324.87 174.93H389.13V110.67H324.87V174.93ZM253.47 174.93H317.73V110.67H253.47V174.93ZM182.07 174.93H246.33V110.67H182.07V174.93ZM246.33 539.07H182.07V603.33H246.33V539.07ZM317.73 539.07H253.47V603.33H317.73V539.07ZM389.13 539.07H324.87V603.33H389.13V539.07ZM460.53 539.07H396.27V603.33H460.53V539.07ZM531.93 539.07H467.67V603.33H531.93V539.07ZM467.67 103.53H531.93V39.27H467.67V103.53ZM396.27 103.53H460.53V39.27H396.27V103.53ZM324.87 103.53H389.13V39.27H324.87V103.53ZM253.47 103.53H317.73V39.27H253.47V103.53ZM182.07 103.53H246.33V39.27H182.07V103.53ZM110.67 103.53H174.93V39.27H110.67V103.53ZM174.93 610.47H110.67V674.73H174.93V610.47ZM246.33 610.47H182.07V674.73H246.33V610.47ZM317.73 610.47H253.47V674.73H317.73V610.47ZM389.13 610.47H324.87V674.73H389.13V610.47ZM460.53 610.47H396.27V674.73H460.53V610.47ZM531.93 610.47H467.67V674.73H531.93V610.47ZM603.33 610.47H539.07V674.73H603.33V610.47Z"
+              fill="url(#paint0_radial_9_6)"></path>
+            <defs>
+              <radialGradient
+                id="paint0_radial_9_6"
+                cx="0"
+                cy="0"
+                r="1"
+                gradientUnits="userSpaceOnUse"
+                gradientTransform="translate(357 357) rotate(90) scale(357)"
+              >
+                <stop stop-color="white"></stop>
+                <stop offset="1" stop-color="white" stop-opacity="0"></stop>
+                <stop offset="1" stop-opacity="0"></stop>
+              </radialGradient>
+            </defs>
+          </svg>
+        </div>
       </div>
       <div class="mt-10">
         <h5 class="font-bold">Skills:</h5>
@@ -59,6 +130,29 @@ const recentBlogPosts = (await getCollection("blogs"))
           <div class="skill-tag">PostgreSQL</div>
           <div class="skill-tag">Docker</div>
           <div class="skill-tag">Open-Source</div>
+        </div>
+      </div>
+      <div class="mt-10">
+        <h5 class="font-bold">Open Source Projects:</h5>
+        <div class="grid sm:grid-cols-2 gap-4">
+          {
+            openSourceProjects.map((project) => (
+              <div>
+                <ProjectCard
+                  title={project.title}
+                  description={project.description}
+                  heroImage={project.heroImage}
+                  url={project.url}
+                  starsUrl={project.starsUrl}
+                />
+                <div class="flex items-center gap-2 flex-wrap mt-2">
+                  {(project.tags ?? []).map((tag) => (
+                    <div class="skill-tag">{tag}</div>
+                  ))}
+                </div>
+              </div>
+            ))
+          }
         </div>
       </div>
       <div class="mt-10">
@@ -86,7 +180,7 @@ const recentBlogPosts = (await getCollection("blogs"))
           >
         </h5>
         <div>
-          <ul class="grid grid-cols-2 gap-4">
+          <ul class="grid sm:grid-cols-2 gap-4">
             {
               recentBlogPosts.map((post) => (
                 <li>
@@ -103,9 +197,6 @@ const recentBlogPosts = (await getCollection("blogs"))
           </ul>
         </div>
       </div>
-      <div class="mt-10">
-        <h5 class="font-bold">Open Source Projects:</h5>
-      </div>
     </main>
     <Footer />
   </body>
@@ -119,8 +210,40 @@ const recentBlogPosts = (await getCollection("blogs"))
     margin: 0;
     padding: 0.4rem 0.7rem 0.2rem 0.7rem;
     line-height: 1rem;
-    border-radius: 0.8rem;
+    border-radius: 0.4rem;
     color: var(--white);
     white-space: nowrap;
+  }
+  .wave {
+    display: inline-block;
+    animation: wave-animation 7s infinite;
+    transform-origin: 70% 70%;
+  }
+
+  @keyframes wave-animation {
+    0% {
+      transform: rotate(0deg);
+    }
+    10% {
+      transform: rotate(14deg);
+    }
+    20% {
+      transform: rotate(-8deg);
+    }
+    30% {
+      transform: rotate(14deg);
+    }
+    40% {
+      transform: rotate(-4deg);
+    }
+    50% {
+      transform: rotate(10deg);
+    }
+    60% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(0deg);
+    }
   }
 </style>

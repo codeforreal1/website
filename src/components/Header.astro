@@ -1,18 +1,28 @@
 ---
-import { SITE_TITLE } from "../consts";
+import { Image } from "astro:assets";
+import LogoImage from "../assets/logo.png";
 import SocialLinks from "./SocialLinks.astro";
 ---
 
 <header>
   <nav class="px-2 py-4">
-    <h2><a href="/">{SITE_TITLE}</a></h2>
+    <h2>
+      <a href="/">
+        <Image
+          src={LogoImage}
+          alt="codeforreal logo"
+          class="w-45 sm:w-65"
+          loading="eager"
+        />
+      </a>
+    </h2>
     <SocialLinks />
   </nav>
 </header>
 <style>
   header {
-    margin: 0;
-    padding: 0 1em;
+    width: 800px;
+    margin: 0 auto;
   }
   h2 {
     margin: 0;
@@ -29,7 +39,6 @@ import SocialLinks from "./SocialLinks.astro";
     justify-content: space-between;
   }
   nav a {
-    padding: 1em 0.5em;
     color: var(--black);
     text-decoration: none;
     color: var(--white);
@@ -45,6 +54,12 @@ import SocialLinks from "./SocialLinks.astro";
   @media (max-width: 720px) {
     .social-links {
       display: none;
+    }
+
+    header {
+      width: unset;
+      margin: 0 unset;
+      padding: 0 1em;
     }
   }
 </style>

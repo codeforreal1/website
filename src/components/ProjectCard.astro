@@ -1,0 +1,24 @@
+---
+import { Image } from "astro:assets";
+import FallbackImage from "../assets/blog-placeholder.jpg";
+import type { Project } from "../types/project";
+
+const { title, description, heroImage, url, starsUrl } = Astro.props as Project;
+---
+
+<div class="rounded-xl overflow-hidden">
+  <a href={url} target="_blank">
+    <Image
+      src={heroImage! ?? FallbackImage}
+      alt={title}
+      class="w-full h-[220px]! object-cover"
+    />
+  </a>
+  <h4 class="text-white opacity-85 mt-2! my-0!">{title}</h4>
+  <p class="text-[var(--gray)] m-0! text-sm mt-2!">
+    {description}
+  </p>
+  <a href={url} target="_blank">
+    <img alt={`${title} stars`} src={starsUrl} loading="lazy" class="my-2" />
+  </a>
+</div>
