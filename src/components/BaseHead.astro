@@ -1,7 +1,7 @@
 ---
 import type { ImageMetadata } from "astro";
-import { SEO } from "astro-seo";
-import { getImagePath } from "astro-opengraph-images";
+// import { SEO } from "astro-seo";
+// import { getImagePath } from "astro-opengraph-images";
 
 import { SITE_TITLE } from "../consts";
 import FallbackImage from "../assets/blog-placeholder.jpg";
@@ -17,7 +17,7 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
 
 const { title, description, image = FallbackImage } = Astro.props;
 const { url, site } = Astro;
-const openGraphImageUrl = getImagePath({ url, site });
+// const openGraphImageUrl = getImagePath({ url, site });
 ---
 
 <!-- Global Metadata -->
@@ -71,7 +71,7 @@ const openGraphImageUrl = getImagePath({ url, site });
 <meta property="twitter:description" content={description} />
 <meta property="twitter:image" content={new URL(image.src, Astro.url)} /> -->
 
-<SEO
+<!-- <SEO
   openGraph={{
     basic: {
       title: title,
@@ -83,4 +83,4 @@ const openGraphImageUrl = getImagePath({ url, site });
       description: description,
     },
   }}
-/>
+/> -->
