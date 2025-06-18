@@ -13,11 +13,10 @@ import UltimateNestjsBoilerplateImage from "../assets/ultimate-nestjs-boilerplat
 import ProjectCard from "../components/ProjectCard.astro";
 
 const recentBlogPosts = (await getCollection("blogs"))
-  .slice(0, 4)
   .sort(
-    (a, b) => b.data.publishedDate.valueOf() - a.data.publishedDate.valueOf()
-  );
-
+    (a, b) => +new Date(b.data.publishedDate) - +new Date(a.data.publishedDate)
+  )
+  .slice(0, 4);
 const openSourceProjects: Project[] = [
   {
     title: "CompressO",
@@ -67,13 +66,13 @@ const openSourceProjects: Project[] = [
           <h1 class="text-center md:text-left">
             <span class="wave">👋</span> Hey there!
           </h1>
-          <p class="md:mr-[5rem] text-center md:text-left px-10 md:px-0">
+          <p class="md:mr-[2rem] text-center md:text-left px-8 md:px-0">
             Welcome! I'm a Senior Software Engineer by day 💼 and side-project
             tinkerer by night 🕸. I'm a technology nerd 🤓 and I share all of my
             learnings on <a
               href="https://www.threads.com/@codeforreal"
               target="_blank">Threads</a
-            >.
+            >. Follow along ⚡
           </p>
         </div>
         <div class="relative w-full flex justify-center md:justify-end">
@@ -130,6 +129,11 @@ const openSourceProjects: Project[] = [
           <div class="skill-tag">PostgreSQL</div>
           <div class="skill-tag">Docker</div>
           <div class="skill-tag">Open-Source</div>
+          <div class="skill-tag">DSA</div>
+          <div class="skill-tag">System Design</div>
+          <div class="skill-tag">Distributed System</div>
+          <div class="skill-tag">Micro-services</div>
+          <div class="skill-tag">Artificial Intelligence</div>
         </div>
       </div>
       <div class="mt-10">

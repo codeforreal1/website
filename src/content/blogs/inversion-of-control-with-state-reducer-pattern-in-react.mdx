@@ -1,0 +1,716 @@
+---
+title: 'Inversion of Control with State Reducer pattern in React: Deep Dive'
+description: 'Design Pattern to prevent prop overloading in React.'
+publishedDate: 'Jan 2 2022'
+heroImage: ../../assets/blogs/inversion-of-control-with-state-reducer-pattern-in-react.png
+---
+
+Inversion of control with state reducer pattern is a high level component design pattern in React that will abstract the out the main logic with its own separation of concern while still allowing to make your UI development flexible. You might encounter a situation while building complex apps with React where you need to support multiple use cases of the same UI with a little bit of tweak in different parts of your application but you still want the core logic of that UI to be not messed up by these different cases. But most importantly you want to make the component in such a way that in future if we get additional use cases for the UI, you want that use case to be extended from the base without even touching it.
+
+To demonstrate one of these kind of scenario I have created a little React demo app.
+You can find the full source code of this demo [here](https://github.com/niraj-khatiwada/react-ioc). 
+
+<em>By the way, if you want to learn about common React patterns, you can check out my article [3 React Component Patterns Every React Developer Should Know](https://nirajkhatiwada.com/3-react-component-patterns-every-beginner-to-intermediate-react-developers-need-to-know-f6e3155a74e3)</em>. Lets get back to the topic.
+
+We are going to demonstrate this app mapping the real life scenario to the UI. This might not happen in the real app but you yiu get the idea. Consider we have three light switches each having 2 states: ON, OFF. These 3 switches is associated to 3 floors of a house. By default all 3 switches are off.
+
+```
+import React from 'react'
+import './App.css'
+
+function CheckBox({ label = '', id, isON, onChange = () => null }) {
+  return (
+    <div>
+      <input type="checkbox" id={id} onChange={onChange} checked={isON} />
+      <label htmlFor={id}>{label}</label>
+    </div>
+  )
+}
+
+function Switches({ items = [] }) {
+  const [toggleSwitch, setToggleSwitch] = React.useState(() =>
+    items.reduce((accumulator, currentValue) => {
+      if (!accumulator[currentValue?.id]) {
+        accumulator[currentValue?.id] = false
+      }
+      return accumulator
+    }, {})
+  )
+
+  const handleSwitchToggle = (floorNumber) => {
+    if (!floorNumber) {
+      throw new Error('Please specify the floor number')
+    }
+
+    setToggleSwitch((previousState) => {
+      const currentFloorState = previousState[floorNumber]
+
+      return {
+        ...previousState,
+        [floorNumber]: !currentFloorState,
+      }
+    })
+  }
+
+  return (
+    <>
+      <div>
+        {items
+          .sort((a, b) => -a?.id + b?.id)
+          .map((floor) => (
+            <p key={floor?.id}> {toggleSwitch[floor?.id] ? `💡` : ` 🔌`}</p>
+          ))}
+      </div>
+      <div>
+        {items
+          .sort((a, b) => -a?.id + b?.id)
+          .map((floor) => (
+            <CheckBox
+              key={floor?.id}
+              label={floor?.name}
+              id={floor?.selectorId}
+              onChange={handleSwitchToggle.bind(null, floor?.id)}
+              isON={toggleSwitch[floor?.id]}
+            />
+          ))}
+      </div>
+    </>
+  )
+}
+
+const floors = [
+  {
+    id: 1,
+    name: 'First Floor',
+    selectorId: 'first-floor-light-switch',
+  },
+  {
+    id: 2,
+    name: 'Second Floor',
+    selectorId: 'second-floor-light-switch',
+  },
+  {
+    id: 3,
+    name: 'Third Floor',
+    selectorId: 'third-floor-light-switch',
+  },
+]
+
+function App() {
+  return <Switches items={floors} />
+}
+
+export default App
+
+```
+
+
+![ezgif.com-gif-maker (3).gif](https://cdn.hashnode.com/res/hashnode/image/upload/v1641138035545/j8rzc_aOL.gif)
+
+<em>You might me wondering "Whats that ugly looking function declaration inside useState(). Why dont we just reduce the items directly?", then you should definately checkout [this](https://nirajkhatiwada.com/lazy-state-and-lazy-refs-initialization-in-react) article. It is called lazy initialization.</em>
+
+Lets say in one house the second floor light can only be toggled if first floor light is ON, and third floor light can only be toggled if second floor light is ON. So we need to modify handleSwitchToggle a little bit and pass a prop, lets name this as incrementalToggle, to be true.
+
+```
+function Switches({ items = [], incrementalToggle = false }) {
+...
+...
+```
+```
+    const handleSwitchToggle = (floorNumber) => {
+    if (!floorNumber) {
+      throw new Error('Please specify the floor number')
+    }
+    if (incrementalToggle) {
+      setToggleSwitch((previousState) => {
+        const previousFloorState = previousState[floorNumber - 1]
+        const currentFloorState = previousState[floorNumber]
+
+        return {
+          ...previousState,
+          [floorNumber]:
+            floorNumber !== 1
+              ? previousFloorState
+                ? !currentFloorState
+                : currentFloorState
+              : !currentFloorState,
+        }
+      })
+    } else {
+      setToggleSwitch((previousState) => {
+        const currentFloorState = previousState[floorNumber]
+
+        return {
+          ...previousState,
+          [floorNumber]: !currentFloorState,
+        }
+      })
+    }
+  }
+  }
+
+```
+```
+function App() {
+  return <Switches items={floors} incrementalToggle />
+}
+```
+
+![ezgif.com-gif-maker (4).gif](https://cdn.hashnode.com/res/hashnode/image/upload/v1641138175724/VkgtiIdt3.gif)
+
+Now lets say in another house its just the opposite, first floor light can be toggled when second floor light is ON and second floor light can be toggled when third floor is ON. We can again make another prop name decrementalToggle but what to do when we supply both incrementalToggle and decrementalToggle props at the same time. To solve this lets merge those two props into something called toggleType which can be either "INCREMENTAL" or "DECREMENTAL". This way we can only supply one prop.
+
+```
+function Switches({ items = [], toggleType }) {
+...
+...
+```
+
+```
+  const handleSwitchToggle = (floorNumber) => {
+    if (!floorNumber) {
+      throw new Error('Please specify the floor number')
+    }
+    if (toggleType?.length > 0) {
+      if (toggleType == 'INCREMENTAL') {
+        setToggleSwitch((previousState) => {
+          const previousFloorState = previousState[floorNumber - 1]
+          const currentFloorState = previousState[floorNumber]
+
+          return {
+            ...previousState,
+            [floorNumber]:
+              floorNumber !== 1
+                ? previousFloorState
+                  ? !currentFloorState
+                  : currentFloorState
+                : !currentFloorState,
+          }
+        })
+      } else {
+        setToggleSwitch((previousState) => {
+          const nextFloorState = previousState[floorNumber + 1]
+          const currentFloorState = previousState[floorNumber]
+
+          return {
+            ...previousState,
+            [floorNumber]:
+              floorNumber !== 3
+                ? nextFloorState
+                  ? !currentFloorState
+                  : currentFloorState
+                : !currentFloorState,
+          }
+        })
+      }
+    } else {
+      setToggleSwitch((previousState) => {
+        const currentFloorState = previousState[floorNumber]
+
+        return {
+          ...previousState,
+          [floorNumber]: !currentFloorState,
+        }
+      })
+    }
+  }
+```
+```
+function App() {
+  return <Switches items={floors} toggleType="DECREMENTAL" />
+}
+```
+
+Now again lets say another house has light bulb beside the switch. We can add a prop named lightBesideSwitch(Boolean) indicating the bulb should be side by side with the switch.
+
+```
+function Switches({
+  items = [],
+  toggleType,
+  lightBesideSwitch = false,
+}) {
+....
+....
+```
+
+
+And JSX should look like:
+```
+<>
+      {!lightBesideSwitch ? (
+        <div>
+          {items
+            .sort((a, b) => -a?.id + b?.id)
+            .map((floor) => (
+              <p key={floor?.id}> {toggleSwitch[floor?.id] ? `💡` : ` 🔌`}</p>
+            ))}
+        </div>
+      ) : null}
+      <div>
+        {items
+          .sort((a, b) => -a?.id + b?.id)
+          .map((floor) => (
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <CheckBox
+                key={floor?.id}
+                label={floor?.name}
+                id={floor?.selectorId}
+                onChange={handleSwitchToggle.bind(null, floor?.id)}
+                isON={toggleSwitch[floor?.id]}
+              />
+              {lightBesideSwitch ? (
+                <p style={{ margin: 0, marginLeft: '1rem' }} key={floor?.id}>
+                  {toggleSwitch[floor?.id] ? `💡` : ` 🔌`}
+                </p>
+              ) : null}
+            </div>
+          ))}
+      </div>
+    </>
+```
+```
+function App() {
+  return (
+    <Switches
+      items={floors}
+      toggleType="DECREMENTAL"
+      lightBesideSwitch={true}
+    />
+  )
+}
+```
+
+![image.png](https://cdn.hashnode.com/res/hashnode/image/upload/v1641140832931/YWFK0dPX6.png)
+
+Now again there is a condition, where light bulb should be ahead of switch. So you add another prop name
+
+```
+function Switches({
+  items = [],
+  toggleType,
+  lightBesideSwitch = false,
+  lightAheadOfSwitch = false,
+
+}) {
+....
+....
+```
+JSX should look like
+```
+<>
+      {!lightBesideSwitch ? (
+        <div>
+          {items
+            .sort((a, b) => -a?.id + b?.id)
+            .map((floor) => (
+              <p key={floor?.id}> {toggleSwitch[floor?.id] ? `💡` : ` 🔌`}</p>
+            ))}
+        </div>
+      ) : null}
+      <div>
+        {items
+          .sort((a, b) => -a?.id + b?.id)
+          .map((floor) => (
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              {lightBesideSwitch && lightAheadOfSwitch ? (
+                <p style={{ margin: 0, marginLeft: '1rem' }} key={floor?.id}>
+                  {toggleSwitch[floor?.id] ? `💡` : ` 🔌`}
+                </p>
+              ) : null}
+              <CheckBox
+                key={floor?.id}
+                label={floor?.name}
+                id={floor?.selectorId}
+                onChange={handleSwitchToggle.bind(null, floor?.id)}
+                isON={toggleSwitch[floor?.id]}
+              />
+              {lightBesideSwitch && !lightAheadOfSwitch ? (
+                <p style={{ margin: 0, marginLeft: '1rem' }} key={floor?.id}>
+                  {toggleSwitch[floor?.id] ? `💡` : ` 🔌`}
+                </p>
+              ) : null}
+            </div>
+          ))}
+      </div>
+    </>
+```
+
+```
+function App() {
+  return (
+    <Switches
+      items={floors}
+      toggleType="DECREMENTAL"
+      lightBesideSwitch={true}
+      lightAheadOfSwitch={true}
+    />
+  )
+}
+```
+
+![image.png](https://cdn.hashnode.com/res/hashnode/image/upload/v1641141159258/E8ci-d6BO.png)
+
+Now lets say we want to be able to change the bulb when its state is ON and OFF. So we add another prop name customBulbON and customBulbOFF.
+
+```
+function Switches({
+  items = [],
+  toggleType,
+  lightBesideSwitch = false,
+  lightAheadOfSwitch = false,
+  customBulbON = '💡',
+  customBulbOFF = '🔌',
+}) {
+```
+```
+function App() {
+  return (
+    <Switches
+      items={floors}
+      toggleType="DECREMENTAL"
+      lightBesideSwitch={true}
+      lightAheadOfSwitch={true}
+      customBulbON="🔦"
+      customBulbOFF="🔋"
+    />
+  )
+}
+```
+JSX should be changed to:
+```
+<>
+      {!lightBesideSwitch ? (
+        <div>
+          {items
+            .sort((a, b) => -a?.id + b?.id)
+            .map((floor) => (
+              <p key={floor?.id}>
+                {' '}
+                {toggleSwitch[floor?.id] ? customBulbON : customBulbOFF}
+              </p>
+            ))}
+        </div>
+      ) : null}
+      <div>
+        {items
+          .sort((a, b) => -a?.id + b?.id)
+          .map((floor) => (
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              {lightBesideSwitch && lightAheadOfSwitch ? (
+                <p style={{ margin: 0, marginLeft: '1rem' }} key={floor?.id}>
+                  {toggleSwitch[floor?.id] ? customBulbON : customBulbOFF}
+                </p>
+              ) : null}
+              <CheckBox
+                key={floor?.id}
+                label={floor?.name}
+                id={floor?.selectorId}
+                onChange={handleSwitchToggle.bind(null, floor?.id)}
+                isON={toggleSwitch[floor?.id]}
+              />
+              {lightBesideSwitch && !lightAheadOfSwitch ? (
+                <p style={{ margin: 0, marginLeft: '1rem' }} key={floor?.id}>
+                  {toggleSwitch[floor?.id] ? customBulbON : customBulbOFF}
+                </p>
+              ) : null}
+            </div>
+          ))}
+      </div>
+    </>
+```
+
+
+![image.png](https://cdn.hashnode.com/res/hashnode/image/upload/v1641141457319/wrxXZEDVh.png)
+
+Now its starting to get messier. Lets say in another case we want only one bulb to be turned ON at once. And there might be a case where when a bulb is turned ON, all other will also turn ON  or when one is turned OFF, all other should turn OFF too. We should write like hundreds of props to support every edge cases.
+```
+<Switches
+      items={floors}
+      toggleType="DECREMENTAL"
+      lightBesideSwitch={true}
+      lightAheadOfSwitch={true}
+      customBulbON="🔦"
+      customBulbOFF="🔋"
+      automaticOpen={true}
+      automaticClose={false}
+      ...
+      ...
+      🤮
+      🤮
+      🤮
+    />
+```
+
+To solve this we will now introduce Inversion of control design pattern. Lets create another file with content below:
+```
+import React from 'react'
+
+const ACTION_TYPES = {
+  TOGGLE_SWITCH: 'TOGGLE_SWITCH',
+}
+
+function defaultReducer(state, action) {
+  switch (action.type) {
+    case ACTION_TYPES.TOGGLE_SWITCH:
+      const switchId = action?.payload?.id
+      return {
+        ...state,
+        [switchId]: !state?.[switchId],
+      }
+  }
+}
+
+function useSwitch({ reducer = defaultReducer, items = [] } = {}) {
+  const [switchState, dispatch] = React.useReducer(
+    reducer,
+    items.reduce((accumulator, currentValue) => {
+      if (!accumulator[currentValue?.id]) {
+        accumulator[currentValue?.id] = false
+      }
+      return accumulator
+    }, {})
+  )
+
+  const toggleSwitch = (switchId) =>
+    dispatch({ type: ACTION_TYPES.TOGGLE_SWITCH, payload: { id: switchId } })
+
+  return { switchState, toggleSwitch }
+}
+
+export { useSwitch, defaultReducer, ACTION_TYPES }
+```
+This file contains the base logic of every switch mechanism. It contains a custom hooks that manages the state of every bulb and a default reducer to manage the state. The useSwitch hooks exposes the switch state, and a function to toggle the switch. 
+By default all the switches will be turned off and can be toggled using the switch. So our `App.js` will look something like this:
+```
+import React from 'react'
+import './App.css'
+
+import { useSwitch } from './Switch'
+
+function CheckBox({ label = '', id, isON, onChange = () => null }) {
+  return (
+    <div>
+      <input type="checkbox" id={id} onChange={onChange} checked={isON} />
+      <label htmlFor={id}>{label}</label>
+    </div>
+  )
+}
+
+function Switches({ items = [] }) {
+  const { switchState, toggleSwitch } = useSwitch({ items })
+
+  return (
+    <>
+      <div>
+        {items
+          .sort((a, b) => -a?.id + b?.id)
+          .map((floor) => (
+            <p key={floor?.id}> {switchState[floor?.id] ? '💡' : '🔌'}</p>
+          ))}
+      </div>
+      <div>
+        {items
+          .sort((a, b) => -a?.id + b?.id)
+          .map((floor) => (
+            <CheckBox
+              key={floor?.id}
+              label={floor?.name}
+              id={floor?.selectorId}
+              onChange={toggleSwitch.bind(null, floor?.id)}
+              isON={switchState[floor?.id]}
+            />
+          ))}
+      </div>
+    </>
+  )
+}
+
+const floors = [
+  {
+    id: 1,
+    name: 'First Floor',
+    selectorId: 'first-floor-light-switch',
+  },
+  {
+    id: 2,
+    name: 'Second Floor',
+    selectorId: 'second-floor-light-switch',
+  },
+  {
+    id: 3,
+    name: 'Third Floor',
+    selectorId: 'third-floor-light-switch',
+  },
+]
+
+function App() {
+  return <Switches items={floors} />
+}
+
+export default App
+
+```
+Now lets go over the first case. In first case, second floor light can only be toggled if first floor light is ON, and third floor light can only be toggled if second floor light is ON. So we need to make our own reducer for this case which will look something like this:
+```
+function incrementalToggleReducer(previousState, action) {
+  switch (action.type) {
+    case ACTION_TYPES.TOGGLE_SWITCH:
+      const switchId = action?.payload?.id
+      const previousFloorState = previousState[switchId - 1]
+      const currentFloorState = previousState[switchId]
+
+      return {
+        ...previousState,
+        [switchId]:
+          switchId !== 1
+            ? previousFloorState
+              ? !currentFloorState
+              : currentFloorState
+            : !currentFloorState,
+      }
+  }
+}
+```
+And pass this custom reducer to useSwitch hook:
+```
+const { switchState, toggleSwitch } = useSwitch({
+    items,
+    reducer: incrementalToggleReducer,
+  })
+```
+![ezgif.com-gif-maker (4).gif](https://cdn.hashnode.com/res/hashnode/image/upload/v1641138175724/VkgtiIdt3.gif)
+
+
+Every other thing will remain same and you can see that the app behaves exactly the same way that we had above for the same case. Our base logic remains still same but we managed to make it work without adding extra prop.
+
+For the second case lets create decrementalToggleReducer:
+```
+function decrementalToggleReducer(previousState, action) {
+  switch (action.type) {
+    case ACTION_TYPES.TOGGLE_SWITCH:
+      const switchId = action?.payload?.id
+      const nextFloorState = previousState[switchId + 1]
+      const currentFloorState = previousState[switchId]
+
+      return {
+        ...previousState,
+        [switchId]:
+          switchId !== 3
+            ? nextFloorState
+              ? !currentFloorState
+              : currentFloorState
+            : !currentFloorState,
+      }
+  }
+}
+```
+```
+ const { switchState, toggleSwitch } = useSwitch({
+    items,
+    reducer: decrementalToggleReducer,
+  })
+```
+
+For the third case we wanted light bulbs to be aside the switches. You modify the Switch Component to look like this:
+```
+function Switches({ items = [] }) {
+  const { switchState, toggleSwitch } = useSwitch({
+    items,
+    reducer: decrementalToggleReducer,
+  })
+
+  return (
+    <>
+      <div>
+        {items
+          .sort((a, b) => -a?.id + b?.id)
+          .map((floor) => (
+            <div style={{ display: 'flex' }} key={floor?.id}>
+              <CheckBox
+                label={floor?.name}
+                id={floor?.selectorId}
+                onChange={toggleSwitch.bind(null, floor?.id)}
+                isON={switchState[floor?.id]}
+              />
+              <p style={{ margin: 0, marginLeft: '1rem' }}>
+                {' '}
+                {switchState[floor?.id] ? '💡' : '🔌'}
+              </p>
+            </div>
+          ))}
+      </div>
+    </>
+  )
+}
+```
+Instead of messing with the same Switch component using props to conditionally display the desired UI, you are in complete control of the UI. You can render UI however you want and you can change the logic using custom reducer.
+
+Fourth Case: Bulb needs to ahead of switch. Just move the bulb above the switch.
+```
+function Switches({ items = [] }) {
+  const { switchState, toggleSwitch } = useSwitch({
+    items,
+    reducer: decrementalToggleReducer,
+  })
+
+  return (
+    <>
+      <div>
+        {items
+          .sort((a, b) => -a?.id + b?.id)
+          .map((floor) => (
+            <div style={{ display: 'flex' }} key={floor?.id}>
+              <p style={{ margin: 0, marginRight: '1rem' }}>
+                {' '}
+                {switchState[floor?.id] ? '💡' : '🔌'}
+              </p>
+              <CheckBox
+                label={floor?.name}
+                id={floor?.selectorId}
+                onChange={toggleSwitch.bind(null, floor?.id)}
+                isON={switchState[floor?.id]}
+              />
+            </div>
+          ))}
+      </div>
+    </>
+  )
+}
+```
+
+Fifth Case: Custom icons. Use whichever icon you like, you are in complete control of the UI.
+```
+function Switches({ items = [] }) {
+  const { switchState, toggleSwitch } = useSwitch({
+    items,
+    reducer: decrementalToggleReducer,
+  })
+
+  return (
+    <>
+      <div>
+        {items
+          .sort((a, b) => -a?.id + b?.id)
+          .map((floor) => (
+            <div style={{ display: 'flex' }} key={floor?.id}>
+              <p style={{ margin: 0, marginRight: '1rem' }}>
+                {' '}
+                {switchState[floor?.id] ? '🔦' : '🔋'}
+              </p>
+              <CheckBox
+                label={floor?.name}
+                id={floor?.selectorId}
+                onChange={toggleSwitch.bind(null, floor?.id)}
+                isON={switchState[floor?.id]}
+              />
+            </div>
+          ))}
+      </div>
+    </>
+  )
+}
+```
+Inversion of control focuses on separation of concerns. You are in complete control of the logic and you are in complete control of the UI. This is why React Hooks are so powerful.
+
+That's it folks. If you have made this far then congratulations. You learn one additional very powerful design pattern in React that libraries like  [downshift](https://github.com/downshift-js/downshift) uses. If you want to explore other design patterns in React, be sure to check [this](https://nirajkhatiwada.com/3-react-component-patterns-every-beginner-to-intermediate-react-developers-need-to-know-f6e3155a74e3) one out as well. And be sure to follow the blog to get future updates on such content.
+[Source Code](https://github.com/niraj-khatiwada/react-ioc)

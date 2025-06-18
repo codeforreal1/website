@@ -1,0 +1,151 @@
+---
+title: 'Lazy State and Lazy Refs initialization in React'
+description: 'Prevent heavy computational values in useState() and useRef() during re-renders using lazy initialization'
+publishedDate: 'Jan 1 2022'
+heroImage: ../../assets/blogs/lazy-state-and-lazy-ref-initialization-in-react.png
+---
+
+Today we are going to learn about lazy state and lazy refs initialization in React. These are not actually features per se in React but optimization techniques that we might need to do when we are trying to initialize some value in state or ref that might be heavy in computation. Lets get right into it.
+
+Lets say we have this simple ```App.js``` component,
+
+```
+import React from 'react'
+import './App.css'
+
+function App() {
+  const [pressCount, setPressCount] = React.useState(0)
+
+  const handleButtonClick = () => {
+    setPressCount((previousCount) => previousCount + 1)
+  }
+
+  return (
+    <div>
+      <p>My Press Count is {pressCount} </p>
+      <button onClick={handleButtonClick}>Click Me</button>
+    </div>
+  )
+}
+
+export default App
+
+```
+
+Clicking the button will increase the press count.
+Now lets say we want to be able to save this press count in a localStoareg Web API and sync the count every time a user refreshes or comes back to the site. This means we need to be able to save the count after user has done their presses and we need to be able to get the count from localStorage API when the user comes back again to the site.
+So we need to modify our useState like below:
+
+```
+import React from 'react'
+import './App.css'
+
+const ITEM_KEY = 'press'
+
+function App() {
+  const [pressCount, setPressCount] = React.useState(
+    +window.localStorage.getItem(ITEM_KEY)
+  )
+
+  function handleButtonClick() {
+    setPressCount((previousCount) => previousCount + 1)
+  }
+
+  const handleSavePress = React.useCallback(() => {
+    localStorage.setItem(ITEM_KEY, pressCount)
+  }, [pressCount])
+
+  return (
+    <div>
+      <p>My Press Count is {pressCount} </p>
+      <button onClick={handleButtonClick}>Click Me</button>
+      <button onClick={handleSavePress} style={{ marginLeft: '1rem' }}>
+        Save Press
+      </button>
+    </div>
+  )
+}
+
+export default App
+```
+
+Here we have added one more button to save the count progress to localStorage API. But focus on the useState initialization part. We are now passing `+window.localStorage.getItem(ITEM_KEY)` as a initial state. At first localStorage won't have any value mapping to key name 'press' so it will be null and in JavaScript +null = 0 (Neat JS trick there yeh 😉). That means initial value will be 0 here. And everytime the user increases the press count they can save and the handleSavePress function will save the count. That means we have complete synchronization of the count.
+
+But the above approach has one slight problem. Every time we change the press count, our component will re-render, that means our useState() need to also re-initialize. Yes, although we don't need the initial value, useState() will still re-initialize this. That means `window.localStorage.getItem(ITEM_KEY)` will keep on running even though we don't need it at any point after pressing "Click Me" button.
+
+This is where lazy initialization come into play. To prevent the useState() initilizatio  every time the component re-renders, we need to pass the state value as a function. 
+
+```
+import React from 'react'
+import './App.css'
+
+const ITEM_KEY = 'press'
+
+function syncValueFromLocalStorage() {
+  const value = localStorage.getItem(ITEM_KEY)
+  if (value?.length > 0 && !isNaN(value)) {
+    return +value
+  }
+  localStorage.setItem(ITEM_KEY, 0)
+  return 0
+}
+
+function App() {
+  const [pressCount, setPressCount] = React.useState(syncValueFromLocalStorage)
+
+  function handleButtonClick() {
+    setPressCount((previousCount) => previousCount + 1)
+  }
+
+  const handleSavePress = React.useCallback(() => {
+    localStorage.setItem(ITEM_KEY, pressCount)
+  }, [pressCount])
+
+  return (
+    <div>
+      <p>My Press Count is {pressCount} </p>
+      <button onClick={handleButtonClick}>Click Me</button>
+      <button onClick={handleSavePress} style={{ marginLeft: '1rem' }}>
+        Save Press
+      </button>
+    </div>
+  )
+}
+
+export default App
+```
+
+Now our useState() will only use the initial value from localStoarege once and kind of prevents heavy computation. (The localStorage Web API might be not that heavy but still using it unnecessarily multiple times can make the app slow). 
+
+But how do we know this function wont be called on every re-renders? Just add one console.log inside the syncValueFromLocalStorage function and see for yourself.
+```
+function syncValueFromLocalStorage() {
+  console.log('CALLED ME')
+  const value = localStorage.getItem(ITEM_KEY)
+  if (value?.length > 0 && !isNaN(value)) {
+    return +value
+  }
+  localStorage.setItem(ITEM_KEY, 0)
+  return 0
+}
+```
+
+![ezgif.com-gif-maker.gif](https://cdn.hashnode.com/res/hashnode/image/upload/v1641052284854/l9sYTQGEP.gif)
+
+As you can see above, "CALLED ME" was called only once when it was initialized at the beginning or when page was refreshed but was prevented on every re-render, when we press the 'Click Me' button. This is what we wanted.
+
+Keep in mind that we want to just give the reference to function in useState() like `React.useState(syncValueFromLocalStorage)` not invoke it there like `React.useState(syncValueFromLocalStorage())`. Invoking will result in the same behavior that we discussed in the first place. It will be called on every re-render like below. This one is very important for lazy initialization.
+
+![ezgif.com-gif-maker (1).gif](https://cdn.hashnode.com/res/hashnode/image/upload/v1641052622217/qvvRGvrAt.gif)
+
+This was all about lazy initialization in useState(). The one with the useRef() is a little bit different. The idea is same but if we give function as a value to useRef() it will treat as a reference to function. That means we have to call .current() to get the value which I think is not neat. So for useRef just do conditional check if it has value or not in the first place. And if it does not we assign the value. That way we called the function only once and useRef() grabbed the value.
+
+```
+ const value = React.useRef(null)
+  if (value.current == null) {
+    value.current = syncValueFromLocalStorage()
+  }
+```
+
+That's it folks. This short article was all about lazy initialization in React. If you want your feed to be filled with such content on JavaScript, TypeScript, NodeJS, React, GraphQL, MySQL etc make sure to follow the blog. I will be posting a lot of content surrounding Full-Stack Development in the future. 
+

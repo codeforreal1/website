@@ -18,8 +18,8 @@ const { title, description, publishedDate, updatedDate, heroImage } =
     <style>
       main {
         width: calc(100% - 2em);
-        max-width: 100%;
-        margin: 0;
+        max-width: 960px;
+        margin: 0 auto;
       }
       .hero-image {
         width: 100%;
@@ -55,10 +55,32 @@ const { title, description, publishedDate, updatedDate, heroImage } =
       }
     </style>
   </head>
-
   <body>
     <Header />
     <main>
+      <div>
+        <a href="/blogs" class="mb-2 flex items-center">
+          <svg
+            viewBox="0 0 1024 1024"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="currentColor"
+            class="w-4 h-4"
+            ><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g
+              id="SVGRepo_tracerCarrier"
+              stroke-linecap="round"
+              stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"
+              ><path
+                fill="currentColor"
+                d="M224 480h640a32 32 0 1 1 0 64H224a32 32 0 0 1 0-64z"
+              ></path><path
+                fill="currentColor"
+                d="m237.248 512 265.408 265.344a32 32 0 0 1-45.312 45.312l-288-288a32 32 0 0 1 0-45.312l288-288a32 32 0 1 1 45.312 45.312L237.248 512z"
+              ></path></g
+            ></svg
+          >
+          <span class="mt-1 ml-2 block text-sm/6">All Blogs </span>
+        </a>
+      </div>
       <article>
         <div class="hero-image">
           {
@@ -82,7 +104,9 @@ const { title, description, publishedDate, updatedDate, heroImage } =
             <h1>{title}</h1>
             <hr />
           </div>
-          <slot />
+          <div class="opacity-90">
+            <slot />
+          </div>
         </div>
       </article>
     </main>

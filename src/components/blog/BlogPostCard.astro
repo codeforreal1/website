@@ -13,7 +13,8 @@ const { title, publishedDate, heroImage } = Astro.props as BlogPost;
     height={360}
     src={heroImage! ?? FallbackImage}
     alt={title}
-    class="w-full"
+    class="w-full overflow-hidden"
+    fit="cover"
   />
   <h4 class="text-white opacity-85 mt-2! my-0!">{title}</h4>
   <p class="text-[var(--gray)] m-0! text-sm">

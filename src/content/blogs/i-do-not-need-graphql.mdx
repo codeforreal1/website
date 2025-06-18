@@ -1,0 +1,64 @@
+---
+title: 'I do not need GraphQL'
+description: 'Why I switched back to REST after years of using GraphQL.'
+publishedDate: 'Jul 13 2024'
+heroImage: ../../assets/blogs/i-do-not-need-graphql.png
+---
+
+In this post, I would like to address my transition from **REST** to **GraphQL** and back to REST after years of working with GraphQL. I returned to REST not because I think GraphQL is worse but because I found a perfect setup that does the same thing as GraphQL in REST. This is just my personal opinion and this only applies to me in the FullStack TypeScript ecosystem. I’ll tell you how GraphQL solved certain problems that were possible but annoying in REST and will tell you the solution that I applied in REST to replicate the same strategy. Also, this only applies to my personal projects, if my professional projects still use GraphQL, I’ll happily work on it without any hesitations.
+
+<img src="https://cdn.hashnode.com/res/hashnode/image/upload/v1720869580766/3f8d05b3-b99e-44c9-af49-a972dd65f782.png" />
+
+I’ve been using GraphQL for a few years now. When I encountered GraphQL for the first time and started playing with it, I quickly found out that the things that I found cumbersome in REST API were solved by GraphQL. For example, imagine a REST API that returns user data. That user data also has a nested field called profile that needs to be fetched from a separate table. Now, usually, when designing REST API, we’ll always join the profile table and return that data in user data. We also need to make sure that the profile is joined every time. But, that was not the problem for me. The problem was, usually in the front-end I need to fetch user data frequently for various purposes. In that user data, I just need to know some of the fields from a user not from a profile. In fact, I don’t need profile data at all except in the profile section. So my front-end needs to hint server in such a way that if I require profile data Otherwise, don’t join the profile table and just return user data only. Avoiding that join in complex queries speeds up the response time as well. This problem was immediately solved by GraphQL.
+
+<img src="https://cdn.hashnode.com/res/hashnode/image/upload/v1720869775465/b78fbe74-d5c2-4cbb-bee7-ad5f7724b5ac.png" />
+
+Now, I know this can be solved using REST API as well using query parameters but I always found writing those queries manually in the URL cumbersome. I needed some kind of managed way for that, that’s why I preferred GraphQL schema over URL. But the fact is, GraphQL does not manage under-fetching and over-fetching by itself. You as a backend developer need to carefully architect your schema and resolver logic in a particular way to do so. So, this under or over-fetching can be managed in any backend API not just GraphQL.
+
+<img src="https://cdn.hashnode.com/res/hashnode/image/upload/v1720870379172/802f1bf2-3f7f-488d-a379-83a6dd668eb6.png" />
+
+The **second reason** why I was attracted to GraphQL was the GQL Schema and type safety. When I was learning GraphQL, I was still not fully on **TypeScript** train. That’s why I thought how useful the schema was especially for frontend developers. You can literally see every query(Imagine like **GET** method in REST), mutations (Imagine like **POST/PUT/DELETE** method in REST), and return types, fields, etc. This made the API very deterministic and frontend developers were confident in what the response data will look like. But, over the years I migrated fully to TypeScript and I started realizing that you can also write the response type of REST API just like GraphQL schema. The thing with GraphQL schema was, that you still had to generate the types of your schema for the front end using TypeScript. I used to use a library called [**Graphql Codegen**](https://the-guild.dev/graphql/codegen).
+
+The **third reason** why I liked GraphQL was the Graphql clients in the front end, Apollo Client for my case. I found GraphQL clients like some kind of magic that automatically handles the fetching, state management, and caching for you. You could just import the hook and query or mutate. It’ll manage the caching automatically for you. You can even persist the cache and make it work offline automagically. It was amazing. Now, I know what you’re thinking. You’re thinking that’s what React Query does. When I started learning GraphQL, React Query was not even released. When React Query was released, I immediately thought this was Apollo Client but for REST API. React Query had all the features and many more compared to Apollo Client. But, React Query had one problem that was not present in Apollo Client. You had to manually write the query keys in React Query because you needed to identify uniqueness in API fetching to cache the data. This was not the case for Apollo Client because it manages the keys automatically based on Graphql schema.
+
+<img src="https://cdn.hashnode.com/res/hashnode/image/upload/v1720870312129/07d81b85-3241-4d56-a8e0-da6b8edd581e.png" />
+
+Now over the years I also encountered a number of complexities in GraphQL that started to become trade-offs at a certain point. Like, the infamous N+1 problem. I had to make sure all the children nodes needed to be batched using data loaders. Now, you might say this is nothing, you just write it once and that’s it. But in that batching logic, you’ve to manage the parent keys for each batching logic after you get the data from the database. This becomes too confusing when you want to do something like grouping or any complex SQL queries. This logic also becomes independent of the parent and I think it just becomes too complex to manage as the schema becomes bigger. I think SQL joining is best instead of fetching separately but that’s just me.
+
+<img src="https://cdn.hashnode.com/res/hashnode/image/upload/v1720870478312/d30cedbd-d67c-4b10-97ed-12b279060408.png" />
+
+Also, each GraphQL request is a POST method. I always hated this and thought this was against the web HTTP protocols. I think this is changing in new versions of GraphQL but it’s too late at this point.
+
+<img src="https://cdn.hashnode.com/res/hashnode/image/upload/v1720870558192/2a57fd54-a752-4341-a20f-d2c93e26dfd8.png" />
+
+I also found that our front end developers especially outside of the JavaScript/TypeScript ecosystem never wanted to learn GraphQL for some reason. They were bullish on REST API and the learning curve was steep. They thought they were getting the same data no matter which one we use so why abandon well-established battle-tested framework opt-in for something niche?
+
+<img src="https://cdn.hashnode.com/res/hashnode/image/upload/v1720870723874/6e6797c7-6183-48d2-8a92-0c77c000152c.png" />
+
+Now let’s leave the GraphQL whining and see how I solved all of these and avoid the headache of managing GraphQL complexities and embracing REST API. GraphQL is just an extension in your existing server so in my case the backend is Nest.js. The front end is anything React framework. Both use strict TypeScript for type-safety. Nest.js has a REST API extension using Swagger. The Swagger extension allows you to generate the API documentation automatically from your controllers. Swagger follows the OpenAPI schema definition of HTTP protocols. Now with just Swagger in the backend, you get REST API playground which can be equivalent to GraphQL playground for me.
+
+<img src="https://cdn.hashnode.com/res/hashnode/image/upload/v1720870829696/c8c12278-4bc7-43e1-9c68-de97b5e76c8a.png" />
+
+The Swagger module can also manage and filter what fields you want to expose to the front end. So we write the API DTO (this is like Graphql schema simplified). You can write queries, form data, etc. in this DTO. Now, since Nest.js is fully TypeScript you can automatically generate the API schema that Swagger defines for your frontend. There’s OpenAPI Codegen that generates the types automatically from your OpenAPI schema. So, the type from schema generation of GraphQL is also solved by this.
+
+<img src="https://cdn.hashnode.com/res/hashnode/image/upload/v1720870848372/852223ce-b3b9-420b-8614-a8b00f41bf92.png" />
+
+Now for the GraphQL client, React query is the best in the REST API space. So what if there was a way to automatically generate the React Query queries and mutations automatically from OpenAPI spec? Turns out you can. There’s a package called `@openapi-codegen/cli` that generates the schema types of your REST API from your Swagger spec and generates the queries, mutations, and even manages the key because it already knows what is the dynamic value based on your Swagger definition. You'll never have to write the API endpoint as well because it automatically generates and finds the URL queries, parameters, and form data particular URL controller requires. So, this way you don't even need to manage the keys that React Query requires you to do for caching. This is just magic✨.
+
+<img src="https://cdn.hashnode.com/res/hashnode/image/upload/v1720870961505/66320144-ae45-45d4-8b59-dc057a588482.png" />
+
+So, GraphQL schema and type safety are solved by OpenAPI codegen that generates the API Schema and all the types as well, Apollo Client is solved by @openapi-codegen/cli that automatically generates queries and mutations and all TypeScript types for you, and N+1 problem of Graphql can easily be solved by using SQL joins. Now, I've one thing to solve, only fetch the data if I require it. Basically in the example that I told you, just join the user to the profile table if the front-end asks for it. With this Swagger and codegen setup, we can just add one extra query in the controller called profile: boolean, and in the SQL joining logic, I'll only join to profile table if the query profile is true. Now, the codegen will generate the type for this, and in the front-end, you can just pass `profile: true` in the query. You can do this for conditionally joining any kind of API without ever touching the URL and managing the key. Now, you might say but in GraphQL you can also conditionally fetch a property of a table. For example, when querying user data, you can just ask for the `id` and `firstName` fields and omit others. This way in the back-end the SQL query might look something like this:
+
+<img src="https://cdn.hashnode.com/res/hashnode/image/upload/v1720871045688/9c162fd7-0aaa-4ff8-bdcd-b71e136f9c1f.png" />
+
+But I think this is just overkill and not required. You’ve already hit the user table so it doesn’t make much difference if you do `SELECT * FROM "user"` (not any computed columns though). So, in our Nest.js API, we’ll only allow the fields that we need to join or are computed to be fetched conditionally not each and every column fields as well.
+
+<img src="https://cdn.hashnode.com/res/hashnode/image/upload/v1720871193902/c1db4449-44e8-425c-8c38-2cf75f2e06e1.png" />
+
+Now, this kind of setup already exists in the market. There’s [trpc](https://trpc.io/). But, `trpc` only works within the JavaScript/TypeScript ecosystem and it’s another learning curve. `trpc` is not a server but it’s just an extension within your existing server like GraphQL. Bear in mind our back-end setup on Nest.js is very minimal within only Swagger as a dependency and it’ll still work for any front-end. We need to design API for native mobile apps, unreal engine games, etc. so anything that ties closely to one ecosystem in the backend is a no go for me. It’s just the React Query and codegen part that we did to act like Apollo Client works within the TypeScript ecosystem only. At this point, I’m not going to learn another way of creating API at this point😅.
+
+<img src="https://cdn.hashnode.com/res/hashnode/image/upload/v1720871361839/35c0f04b-89b7-4aa4-813e-c880714b504c.png" />
+
+With that said, I’m not saying you should just abandon GraphQL and do this too. I just think that the thing that I’m trying to do in GraphQL, can be done in REST API with minimal effort, especially within the TypeScript ecosystem. You should really think about the reasons to why use GraphQL over traditional REST and with the introduction to all the complexities of maintaining it, whether will it be worth it or not. For me, it was not.
+
+Code: [https://github.com/niraj-khatiwada/nestjs-openapi-codegen](https://github.com/niraj-khatiwada/nestjs-openapi-codegen)

@@ -39,7 +39,7 @@ body {
   color: var(--white);
 }
 main {
-  width: 800px;
+  width: 960px;
   max-width: calc(100% - 0em);
   margin: auto;
   padding: 3em 1em;

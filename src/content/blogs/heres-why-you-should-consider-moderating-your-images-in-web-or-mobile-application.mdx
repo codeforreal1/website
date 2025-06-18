@@ -1,0 +1,91 @@
+---
+title: 'Here’s why you should consider moderating images in your web or mobile application.'
+description: 'Filter explicit, adult or violent images uploaded by user.'
+publishedDate: 'Sep 26 2021'
+heroImage: ../../assets/blogs/heres-why-you-should-consider-moderating-your-images-in-web-or-mobile-application.png
+---
+Filter explicit, adult or violent images uploaded by user.
+
+After years of coding in web development one might want to start their own million dollar startup. You come up with a unique idea, decide your tech stacks, divide your budget, code all night to make it the best user experience and finally launch the website. Everything was going well, but suddenly one day, all your website is filled with filthy images that you didn’t actually think the user might upload. Now you have no choice but to shut down the server and find a way to filter these explicit images uploaded by users and prevent in future as well.
+
+Most of the developers usually do not think this through and it may be fine as well for certain platform. But if you want your platform to be safe from explicit or pornographic content, you must moderate these images before actually saving them. Today we are going to be looking at how we can moderate the images or videos uploaded by user.
+
+There are several providers to moderate your images and videos, but in this article we are going to talk about [**Amazon Rekognition**](https://aws.amazon.com/rekognition/). Amazon Rekognition’s Image Moderation provides easy to use API to analyze your images with explicit, adult or violent content and provides confidence scores. These analysis are very accurate and it even categorizes your image content into labels as seen in the image below:
+
+<img src="https://cdn.hashnode.com/res/hashnode/image/upload/v1640438638321/3lZXI4io_.png" />
+
+Amazon Rekognition Image Moderation demo categories.
+
+We are going to be using AWS’s Image Moderation API to filter these images. I have prepared a sample server rendered project in NodeJS with Express package to demo such scenario. You can find the full code [here](https://github.com/niraj-khatiwada/Image-Moderation) if you want to code along. The starter code in “main” branch has code to select the image and upload it into the server. You can switch to branch “complete” for complete working of the app connected with Image Moderation API. Don’t forget to use your own AWS’s API keys in .env file. Okay let’s get started.
+
+*Note: I assume that you already have setup your AWS IAM configuration at this point. If not please follow this* [*link*](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_users_create.html)*.*
+
+To use the AWS Rekognition API you need to first provide full access to your IAM user. Go to your [AWS console](https://console.aws.amazon.com/iam/home) and then on Users menu, select your IAM user and allow [AmazonRekognitionFullAccess](https://docs.aws.amazon.com/rekognition/latest/dg/security-iam.html). It will look something like shown below:
+
+<img src="https://cdn.hashnode.com/res/hashnode/image/upload/v1640438639878/2RFvePoUS.png" />
+
+Enabling [AmazonRekognitionFullAccess](https://docs.aws.amazon.com/rekognition/latest/dg/security-iam.html) permission in AWS console.
+
+Now that we have those settings out of our way let’s get into the fun part, coding.
+
+If you see the Image Moderation demo console in AWS, you can see it labels our image into different level of categories. In this demo we are going to check for top level category “Explicit Nudity”. You can check list of all level available categories [here](https://docs.aws.amazon.com/rekognition/latest/dg/moderation.html).
+
+<img src="https://cdn.hashnode.com/res/hashnode/image/upload/v1640438641630/Rjv-CcCNi.png" />
+
+Amazon Rekognition Image Moderation demo.
+
+First of all lets setup AWS and initialize Image Rekognition instance. Make sure to fill your API keys in .env file first.
+
+<img src="https://cdn.hashnode.com/res/hashnode/image/upload/v1640438643425/E-RWCGmYt.png" />
+
+We are uploading the image to the route “/upload”, so the route has “upload” middleware with [multer](https://www.npmjs.com/package/multer) configuration which will grab the file and save it into the request as req.file.
+
+<img src="https://cdn.hashnode.com/res/hashnode/image/upload/v1640438645211/ERs6oztdR.png" />
+
+POST route for image upload
+
+<img src="https://cdn.hashnode.com/res/hashnode/image/upload/v1640438647007/V46KmvHN5.png" />
+
+Multer configuration for grabbing image uploaded by user.
+
+Image Moderation API takes certain parameters to check the image. In this project we are going to be checking the raw image directly without uploading it to the AWS S3 so the parameters will looks something like shown below. You can find full list of parameters and and their documentation [here](https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/Rekognition.html#detectModerationLabels-property).
+
+<img src="https://cdn.hashnode.com/res/hashnode/image/upload/v1640438648825/YY_PjgqYM.png" />
+
+Full parameter list for Image Moderation API.
+
+Since we are not going to be using S3, we can remove the “S3Object” key and “HumanLoopConifig” key.
+
+<img src="https://cdn.hashnode.com/res/hashnode/image/upload/v1640438650503/jSHWbzVro.png" />
+
+Parameters list for local image.
+
+The only thing to take care here is that the image must be sent in [base64](https://nodejs.org/api/buffer.html) format. Let’s make a separate function that takes the image uploaded by user, convert this to base64 and returns us those required params.
+
+<img src="https://cdn.hashnode.com/res/hashnode/image/upload/v1640438652180/iU6gFlsPx.png" />
+
+Function to return Moderation API parameters.
+
+Now we can run the “detectModerationLabels” method from “rekognition” instance and get the moderation labels from the data.
+
+<img src="https://cdn.hashnode.com/res/hashnode/image/upload/v1640438653902/gc_SNhOQN.png" />
+
+Full code to upload and moderate image.
+
+<img src="https://cdn.hashnode.com/res/hashnode/image/upload/v1640438655742/YWc0Ot8AS.png" />
+
+Function to check the response labels for explicit content.
+
+The moderation labels data looks something like this
+
+<img src="https://cdn.hashnode.com/res/hashnode/image/upload/v1640438657427/CpTr9EVQ3.png" />
+
+Moderation labels response data.
+
+So the full flow is, user uploads the image, we run the moderation API to check for labels, delete the image if any label match for explicit content and return “image not allowed” error. Otherwise we perform our normal post processing task that may include saving the image path to database or saving the image to S3 etc. and return the successful message.
+
+<img src="https://cdn.hashnode.com/res/hashnode/image/upload/v1640438659292/7kB5_fxUYQ.png" />
+
+Response message in our demo project when normal and explicit images were selected respectively.
+
+This was a simple example to check explicit or violent images if the application you are trying to develop does not allow these type of content or you want to limit such content to certain age group.

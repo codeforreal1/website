@@ -7,7 +7,7 @@ import { getCollection } from "astro:content";
 import BlogPostCard from "../../components/blog/BlogPostCard.astro";
 
 const blogPosts = (await getCollection("blogs")).sort(
-  (a, b) => b.data.publishedDate.valueOf() - a.data.publishedDate.valueOf()
+  (a, b) => +new Date(b.data.publishedDate) - +new Date(a.data.publishedDate)
 );
 ---
 
@@ -18,7 +18,7 @@ const blogPosts = (await getCollection("blogs")).sort(
   </head>
   <body>
     <Header />
-    <main>
+    <main class="min-h-[90vh]">
       <section>
         <ul>
           {
