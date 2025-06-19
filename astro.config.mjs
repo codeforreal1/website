@@ -14,6 +14,7 @@ import { dirname } from "path";
 // const __dirname = dirname(__filename);
 
 export default defineConfig({
+  base: "/",
   site: "https://codeforreal.com",
   integrations: [
     mdx(),
