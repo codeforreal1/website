@@ -38,7 +38,7 @@ export default defineConfig({
     //   render: presets.blackAndWhite,
     // }),
   ],
-  outDir: "docs",
+  output: "static",
   vite: {
     plugins: [tailwindcss()],
     build: {
