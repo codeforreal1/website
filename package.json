@@ -15,7 +15,6 @@
     "@resvg/resvg-js": "^2.6.2",
     "@tailwindcss/vite": "^4.1.8",
     "astro": "^5.9.1",
-    "astro-opengraph-images": "^1.13.1",
     "astro-seo": "^0.8.4",
     "sharp": "^0.34.2",
     "tailwindcss": "^4.1.8"

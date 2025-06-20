@@ -42,7 +42,7 @@ main {
   width: 960px;
   max-width: calc(100% - 0em);
   margin: auto;
-  padding: 3em 1em;
+  padding: 2rem 0.5rem;
 }
 h1,
 h2,
@@ -125,8 +125,15 @@ hr {
   body {
     font-size: 18px;
   }
+}
+@media (max-width: 720px) {
   main {
     padding: 1em;
+  }
+}
+@media screen and (min-width: 720px) and (max-width: 1000px) {
+  main {
+    padding: 2rem;
   }
 }
 

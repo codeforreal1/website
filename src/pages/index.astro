@@ -11,6 +11,7 @@ import type { Project } from "../types/project";
 import CompressOImage from "../assets/compresso.png";
 import UltimateNestjsBoilerplateImage from "../assets/ultimate-nestjs-boilerplate.png";
 import ProjectCard from "../components/ProjectCard.astro";
+import OGImage from "../assets/og.png";
 
 const recentBlogPosts = (await getCollection("blogs"))
   .sort(
@@ -54,7 +55,11 @@ const openSourceProjects: Project[] = [
 <!doctype html>
 <html lang="en">
   <head>
-    <BaseHead title={SITE_TITLE} description={SITE_DESCRIPTION} />
+    <BaseHead
+      title={SITE_TITLE}
+      description={SITE_DESCRIPTION}
+      image={OGImage}
+    />
   </head>
   <body>
     <Header />

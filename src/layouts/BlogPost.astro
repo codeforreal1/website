@@ -14,10 +14,10 @@ const { title, description, publishedDate, updatedDate, heroImage } =
 
 <html lang="en">
   <head>
-    <BaseHead title={title} description={description} />
+    <BaseHead title={title} description={description} image={heroImage} />
     <style>
       main {
-        width: calc(100% - 2em);
+        width: calc(100% - 0rem);
         max-width: 960px;
         margin: 0 auto;
       }
@@ -32,9 +32,8 @@ const { title, description, publishedDate, updatedDate, heroImage } =
       }
       .prose {
         width: 720px;
-        max-width: calc(100% - 2em);
+        max-width: calc(100% - 0em);
         margin: auto;
-        padding: 1em;
         color: rgb(var(--gray-dark));
       }
       .title {
