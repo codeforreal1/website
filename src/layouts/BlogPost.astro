@@ -28,10 +28,9 @@ const { title, description, publishedDate, updatedDate, heroImage } =
         display: block;
         margin: 0 auto;
         border-radius: 12px;
-        box-shadow: var(--box-shadow);
       }
       .prose {
-        width: 720px;
+        width: 768px;
         max-width: calc(100% - 0em);
         margin: auto;
         color: rgb(var(--gray-dark));
@@ -77,14 +76,20 @@ const { title, description, publishedDate, updatedDate, heroImage } =
               ></path></g
             ></svg
           >
-          <span class="mt-1 ml-2 block text-sm/6">All Blogs </span>
+          <span class="mt-1 ml-2 block text-sm/6">All Blogs</span>
         </a>
       </div>
       <article>
         <div class="hero-image">
           {
             heroImage && (
-              <Image width={1020} height={510} src={heroImage} alt="" />
+              <Image
+                width={1020}
+                height={510}
+                src={heroImage}
+                alt={title}
+                class="shadow-2xl"
+              />
             )
           }
         </div>

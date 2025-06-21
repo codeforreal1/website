@@ -1,0 +1,334 @@
+---
+title: 'Finally, a Good Type Checker in Python!'
+description: "How Astral's new type checker called 'ty' helps you write better Python code."
+publishedDate: 'June 21 2025'
+heroImage: ../../assets/blogs/finally-a-good-type-checker-in-python.jpg
+---
+
+Python is a great language. It is mature, it's syntax is easy and has great community support. That is the reason why many new developers lean toward using it. 
+But, people that have worked with large project in Python should have realized that lack of static checking or even type hints has always been a pain-point to debug coherently.
+Though, many projects like MyPy, PyRight, etc. have tried to solve this issue, they haven't been able to solve every nooks and corners of type checking. 
+If you come from TypeScript like me, you know that enforcing types on an already established language is a difficult task but not impossible.
+
+If you work in Python ecosystem, you should have definitely heard of a company called [Astral](https://astral.sh/). It's the company behind two of the fastest growing 
+Python tooling ecosystem, [Ruff](https://astral.sh/ruff) an extremely fast linter for Python and [uv](https://github.com/astral-sh/uv), a Python package and project management 
+tool, both written in Rust🦀. I use these 2 tools extensively in all of my recent Python projects and I highly recommend them if you care about upping your DX.
+
+The team behind Astral has recently delved into what they called their biggest investment in Python tooling ecosystem. Designing an extremely fast and modern Python type checker, which also would be written Rust🦀.
+The are calling it "Ty" (*shot form for "type"?*). At this point the tool is still under development(alpha) and is no where ready to be used in production. 
+Nevertheless😛(I can't hold my excitements), in this blog post, we'll be going over some of the basic functionalities provided by the Ty. There are various ways to [install Ty](https://github.com/astral-sh/ty/blob/main/docs/README.md#installation), 
+but I know you guys won't be hurdling those setups so I've prepared a [repo](https://github.com/codeforreal1/python-typechecking) for you to just clone and get started. Also, there's an official [VSCode extension](https://marketplace.visualstudio.com/items?itemName=astral-sh.ty) 
+of Ty available, so make sure to install it as well. Finally, let's do some type checking in Python.
+
+### Basic Types
+#### String
+<span>String is represented by `str`</span>
+<div class="code">
+```python
+def greet(name: str) -> str:
+    return f"Hello, {name}!"
+
+greet("Code For Real")
+```
+</div>
+
+#### Integer
+<span>Integer is represented by `int`</span>
+<div class="code mt-2">
+```python
+def add(a: int, b: int) -> int:
+    return a + b
+
+add(1, 2)
+```
+</div>
+
+#### Float
+<span>Decimal is represented by `float`</span>
+<div class="code mt-2">
+```python
+def area_of_circle(radius: float) -> float:
+    return 3.14159 * radius**2
+
+area_of_circle(2)
+```
+</div>
+
+#### Boolean
+<span>Boolean is represented by `bool`</span>
+<div class="code mt-2">
+```python
+def is_even(n: int) -> bool:
+    return n % 2 == 0
+
+is_even(1)
+```
+</div>
+
+#### Bytes
+<span>Bytes is represented by `bytes`</span>
+<div class="code mt-2">
+```python
+def to_bytes(data: str) -> bytes:
+    return data.encode("utf-8")
+
+to_bytes("Code For Real")
+```
+</div>
+
+#### Null
+<span>Void or null value is represented by `None`</span>
+<div class="code mt-2">
+```python
+def log(message: str) -> None:
+    print(message)
+
+log("Critical")
+
+```
+</div>
+
+
+#### Summary
+| Description | Syntax |
+| ----------- | ----------- |
+| String | `str` |
+| Integer | `int` |
+| Float/Decimal | `float` |
+| Boolean | `bool` |
+| Bytes | `bytes` |
+| Void/Null | `None` |
+
+
+<div class="mt-10" />
+### Collections
+All of the above basic types are globally available for type annotation within the environment. But for these advanced types, we need to import types from `typing` module.
+
+#### List/Array:
+<span>Arrays are generic types which are represented as `List[T]`.</span>
+<div class="code mt-2">
+```python
+from typing import List
+
+def total(numbers: List[int]) -> int:
+    return sum(numbers)
+
+total([1, 2, 3])
+```
+</div>
+
+
+#### Dictionary:
+<span>Dictionaries are generic types which are represented as `Dict[K, V]`.</span>
+<div class="code mt-2">
+```python
+from typing import Dict
+
+def invert(d: Dict[str, int]) -> Dict[int, str]:
+    return {v: k for k, v in d.items()}
+
+invert({"one": 1, "two": 2})
+```
+</div>
+
+
+#### Set:
+<span>Sets are generic types which are represented as `Set[T]`.</span>
+<div class="code mt-2">
+```python
+from typing import Set, List
+
+def unique(values: List[int]) -> Set[int]:
+    return set(values)
+
+unique([1, 2, 3, 1])
+```
+</div>
+
+
+#### Tuple:
+<span>Tuples are generic types which are represented as `Tuple[T1, T2, ...]`.</span>
+<div class="code mt-2">
+```python
+from typing import Tuple
+
+def coordinates() -> Tuple[float, float, str]:
+    return (27.7, 85.3, "North")
+
+coordinates()
+```
+</div>
+
+
+#### Iterable:
+<span>Iterable are generic types which are represented as `Iterable[T]`.</span>
+<div class="code mt-2">
+```python
+from typing import Iterable
+
+def reduce_to_sum(items: Iterable[str]) -> int:
+    return sum((item if type(item).__name__ == "int" else 0) for item in items)
+
+reduce_to_sum([1,2,3])
+reduce_to_sum({"One":1, "Two":2})
+```
+</div>
+
+
+#### Sequence:
+<span>Sequence are generic types which are represented as `Sequence[T]`.</span>
+<div class="code mt-2">
+```python
+from typing import Sequence
+
+def first_three(items: Sequence[int]) -> Sequence[int]:
+    return items[:3]
+
+first_three([1, 2, 3, 4, 5])
+```
+</div>
+
+
+#### Summary
+| Description | Syntax |
+| ----------- | ----------- |
+| List | `List[T]` |
+| Dictionary | `Dict[K, V]` |
+| Set | `Set[T]` |
+| Tuple | `Tuple[T1, T2, ...]` |
+| Iterable | `Iterable[T]` |
+| Sequence | `Sequence[T]` |
+
+<div class="mt-10" />
+### Other Types
+
+#### Literal:
+<span>Literal types accepts any one of the value of same type listed represented as `Literal[T]`.</span>
+<div class="code mt-2">
+```python
+from typing import Literal
+
+def set_theme(theme: Literal["light", "dark"]) -> str:
+    return f"Mode set to {theme}"
+
+set_theme("light")
+```
+</div>
+
+#### Union:
+<span>Union types accepts any one of the types listed represented as `Union[T1, T2, ...]`.</span>
+<div class="code mt-2">
+```python
+from typing import Union
+
+def stringify(x: Union[int, float, str]) -> str:
+    return str(x)
+
+stringify(1)
+stringify(1.2)
+stringify("1")
+```
+</div>
+
+#### Optional:
+<span>Optional types accepts either the annotated value or `None` represented as `Optional[T]`.</span>
+<div class="code mt-2">
+```python
+from typing import Optional
+
+def save_gender(gender: Optional[Literal["Male", "Female", "Others"]] = None):
+    if gender is not None:
+        # Save
+        pass
+    # Do nothing
+
+print(save_gender("Male"))
+print(save_gender())
+
+```
+</div>
+
+#### TypedDict:
+<span>If you come from TypeScript then TypedDict is similar to interfaces. You can specify list of fields that you expect and enforce the type.`.</span>
+<div class="code mt-2">
+```python
+from typing import TypedDict
+
+class User(TypedDict):
+    id: int
+    name: str
+
+
+def greet_user(user: User) -> str:
+    return f"Hello, {user['name']}!"
+
+greet_user(User({"id": "123", "name": "Code For Real"}))
+```
+</div>
+
+#### Self:
+<span>Self is used to represent the type of class instance itself.</span>
+<div class="code mt-2">
+```python
+from typing import Self
+
+class Counter:
+    def __init__(self) -> None:
+        self.count = 0
+
+    def increment(self) -> Self:
+        self.count += 1
+        return self
+
+
+counter = Counter()
+_counter = counter.increment()
+print(_counter.count)
+```
+</div>
+
+#### Final:
+<span>Final is to represent constant value. But keep in mind, this is just a type hint. We can still change the value in runtime even if type-checker complains it.</span>
+<div class="code mt-2">
+```python
+from typing import Final
+
+# Final
+PI: Final[float] = 3.14
+```
+</div>
+
+#### Any:
+<span>Any is used to discard any type enforcement. It just means do anything you want, I give up. By default, this is the type enforced by the compiler.</span>
+<div class="code mt-2">
+```python
+from typing import Any
+
+def debug_output(data: Any) -> None:
+    print("DEBUG:", data)
+
+debug_output("hello")
+debug_output(1)
+
+# This is equivalent to above.
+def debug_output(data) -> None:
+    print("DEBUG:", data)
+
+```
+</div>
+
+#### Summary
+| Description | Syntax |
+| ----------- | ----------- |
+| Literal | `Literal[T]` |
+| Union | `Union[T1, T2, ...]` |
+| Optional | `Optional[T]` |
+| TypedDict | `TypedDict` |
+| Self | `Self` |
+| Final | `Final` |
+| Any | `Any` |
+
+
+<div class="mt-10" />
+That's it for this one folks. Since the tool is still in alpha stage, a lot of features are missing. But I'll make sure to cover new features as soon as they are available for public release.
+You can find the complete code [here](https://github.com/codeforreal1/python-typechecking).
