@@ -7,6 +7,9 @@ heroImage: ../../assets/blogs/using-bun-or-deno-as-a-web-server-in-tauri.png
 import { Image } from 'astro:assets';
 import ElectronMeme from "../../assets/blogs/using-bun-or-deno-as-a-web-server-in-tauri/electron-meme.png"
 import Output1 from "../../assets/blogs/using-bun-or-deno-as-a-web-server-in-tauri/output-1.png"
+import Compile from "../../assets/blogs/using-bun-or-deno-as-a-web-server-in-tauri/compile.png"
+import SidecarSpawn from "../../assets/blogs/using-bun-or-deno-as-a-web-server-in-tauri/sidecar-spawn.png"
+import ProcessFlow from "../../assets/blogs/using-bun-or-deno-as-a-web-server-in-tauri/process.png"
 
 [Tauri](https://tauri.app) is a Rust🦀 framework to build a cross-platform desktop app using Rust as a backend and webview as a frontend layer.
 Unlike Electron, Tauri does not bundle the whole Chromium browser into the final app, it uses the same native webview that the platform ships with. On MacOS, that is Safari WebKit, on Windows that is Edge WebView2 (Chromium-based) and WebKitGTK on Linux.
@@ -23,8 +26,8 @@ While I still recommend you to use the existing Rust backend, you can actually u
 
 Before we start, here's the complete code for [Bun](https://github.com/niraj-khatiwada/tauri-bun) and [Deno](https://github.com/niraj-khatiwada/tauri-deno) version.
 
-### Server Setup:
-Let us first setup a simple HTTP web server in Bun:
+## Initial Setup:
+<p class="!mb-0 !pb-0">Let us first setup a simple HTTP web server in Bun:</p>
 <code>
 ```ts
 function handleCors(_: Request, res: Response) {
@@ -59,9 +62,8 @@ const server = Bun.serve({
 ```
 </code>
 <br />
-Start the server using `bun dev` from the folder `apps/server`. 
-Now, let's try to connect this server from our Tauri webview. We'll be using a simple React SPA with [TanStack Router](https://tanstack.com/router/latest) as our frontend setup. You can browse the code within `apps/client`.
-
+<p class="!mb-2 !pb-0">Start the server using `bun dev` from the folder `apps/server`. </p>
+<p class="!mb-0 !pb-0">Now, let's try to connect this server from our Tauri webview. We'll be using a simple React SPA with [TanStack Router](https://tanstack.com/router/latest) as our frontend setup. You can browse the code within `apps/client`.</p>
 <code>
 ```ts
 function App() {
@@ -89,9 +91,160 @@ function App() {
 </code>
 <br />
 
-To run the client server, head over to `apps/client` and run `bun dev`.
+To run the frontend client, head over to `apps/client` and run `bun dev`.
 
-Note: Tauri requires you to use it's own HTTP client library get full potential (this is annoying actually), so the `fetcher` function you're seeing above is a custom function that I made for convenience. You can find it in `apps/client/utils/fetcher.ts`.
+<p class="italic">Note: Tauri requires you to use it's own HTTP client library get full potential (this is annoying actually), so the `fetcher` function you're seeing above is a custom function that I made for convenience. You can find it in `apps/client/utils/fetcher.ts`.</p>
 
 Now, let's finally Run our Tauri app using the command `bun tauri:dev`. You should see the following output.
 <Image src={Output1} alt="Tauri Bun" style="object-fit: contain; margin: 0 auto;" />
+
+<br />
+Sweet! But, right now, the Bun server is running separately on its own folder. When we ship our desktop app to the users, we need to somehow embed that Bun server into the final app bundle.
+Bun supports something called [standalone binary mode or single-file executable](https://bun.com/docs/bundler/executables) out of the box. With this, you can create a single executable file that can be run in any platform without having to install any dependencies. They're great for CLI application and in fact, [Claude Code](https://x.com/jarredsumner/status/1943492457506697482) recently used Bun single-file executable to ship their agentic CLI app. I used sidecar feature 2 years ago in my free video compression app [CompressO](https://github.com/codeforreal1/compressO) where [FFmpeg](https://www.ffmpeg.org) is embedded as a sidecar binary to act as a media conversion layer. They're really powerful if you want to quickly ship your app without having to rely on any platform or external dependencies. This is perfect for our need.
+
+## Standalone Binary as a Tauri Sidecar
+Tauri has a feature called [Sidecar](https://v2.tauri.app/develop/sidecar/) which allows you to embed the external binaries into the app. After you embed the binaries, the Rust can spawn that binary to perform the task it was bundled for. One requirement for embedding the binary as a sidecar in Tauri is that, the binary must match the target platform you're running the application. Meaning, you need to create a executable binary for each platform - MacOS, Windows and Linux. After creating the binary, we need to place the sidecar binary inside `tauri/bin` folder with respective target name. For example, if you created a binary for MacOS, name the binary executable as `<any_name>-aarch64-apple-darwin` for Silicon(arm64) Macs and `<any_name>-x86_64-apple-darwin` for Intel(x86-64) Macs. This is very common if you want to distribute the binary in different platforms and you can read about these extensively on [Tauri](https://v2.tauri.app/develop/sidecar/) and [Bun](https://bun.com/docs/bundler/executables#cross-compile-to-other-platforms) docs.
+
+<p class="!mb-0">For our convenience, I've prepared a script that can detect your machine architecture and create a respective Bun binary automatically. You can browse the code for that in `apps/server/scripts/compile.ts`. Go ahead and run the command:</p>
+<code>
+```
+bun run --filter server compile
+```
+</code>
+
+Your Bun server code will be compiled automatically and will be linked to the folder `tauri/bin` on the Rust side automatically🪄.
+<Image src={Compile} alt="Compile" style="object-fit: contain; margin: 0 auto;" />
+
+<p class="!mb-0">Now, on the Rust side, we need to inform Tauri that we want to use the binary as a sidecar in our app. You can do that in your `tauri.conf.json`</p>
+<code>
+```json
+{
+    ...,
+    "bundle": {
+        ...
+        "externalBin": ["./bin/tauri-bun-sidecar"],
+    }
+}
+```
+</code>
+
+Here `tauri-bun-sidecar` is the name of our binary and it must match the name of the binary file that was created earlier using Bun compilation.
+
+<p class="!mb-0">Last step is to spawn this binary from our Rust code.</p>
+<code>
+```rust
+pub struct AppState {
+    pub server: Arc<Mutex<Option<CommandChild>>>,
+    pub server_port: u16,
+}
+
+pub fn start_server(app_handle: &AppHandle, server_port: u16){
+    println!("[sidecar] Starting server...");
+    if let Some(app_state) = app_handle.try_state::<AppState>() {
+        if app_state.server.lock().is_some() {
+            println!("[sidecar] Server is already running.");
+            return Ok(());
+        }
+    }
+
+    let shell = app_handle.shell();
+    let mut sidecar = shell
+        .sidecar("tauri-bun-sidecar")
+        .map_err(|err| err.to_string())?;
+
+    sidecar = sidecar.env("PORT", server_port.to_string()); // pass a custom port to the server
+
+    let (mut rx, child) = sidecar.spawn().map_err(|err| err.to_string())?; // spawn the binary
+
+    if let Some(app_state) = app_handle.try_state::<AppState>() {
+        let mut server_lock = app_state.server.lock();
+        *server_lock = Some(child); // store the server instance in our Tauri app state
+    }
+
+    // listen for any output or errors from our sidecar
+    tauri::async_runtime::spawn(async move {
+        while let Some(event) = rx.recv().await {
+            match event {
+                CommandEvent::Stdout(data) => {
+                    if let Ok(text) = String::from_utf8(data) {
+                        let line = text.trim();
+                        println!("[sidecar] Server stdin {}", line);
+                    }
+                }
+                CommandEvent::Stderr(data) =>
+                {
+                    if let Ok(text) = String::from_utf8(data) {
+                        eprintln!("[sidecar] Server stderr {}", text.trim());
+                    }
+                }
+                CommandEvent::Terminated(code) => {
+                    println!(
+                        "[sidecar] Server terminated unexpectedly with code {:?}",
+                        code
+                    );
+                }
+                _ => {}
+            }
+        }
+    });
+    Ok(())
+
+}
+```
+</code>
+
+<p class="!mb-0">We need to now start the server whenever out Tauri app starts:</p>
+<code>
+```rust
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
+pub fn run() {
+    tauri::Builder::default()
+        .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_http::init())
+        .setup(|app| {
+            let listener = TcpListener::bind("127.0.0.1:0")?; // we'll choose a random available port every time we start the app
+            let server_port = listener.local_addr()?.port();
+
+            let app_state = AppState {
+                server: Arc::new(Mutex::new(None)),
+                server_port: server_port,
+            };
+            app.manage(app_state);
+
+            if let Err(err) = server::start_server(app.handle(), server_port) {
+                println!("[sidecar] Failed to start the server: {}", err);
+            }
+
+            Ok(())
+        })
+        .invoke_handler(tauri::generate_handler![get_server_config])
+        .build(tauri::generate_context!())
+        .expect("error while running tauri application")
+        .run();
+}
+```
+</code>
+
+<p class="!mb-0">Let's run the Tauri development server again:</p>
+<code>
+```
+bun tauri:dev
+```
+</code>
+
+You should now the see the following output:
+<Image src={SidecarSpawn} alt="Sidecar Spawn" style="object-fit: contain; margin: 0 auto;" />
+<br />
+Our server is now running from Rust 🎉. This is not a development server running on your device. This is a complete release (production) server running within the Tauri app.
+<Image src={ProcessFlow} alt="ProcessFlow" style="object-fit: contain; margin: 0 auto;" />
+
+<p class='!mb-0'>You can create a release build of your app to test the complete production application if you want using the command:</p>
+<code>
+```
+bun tauri:build
+```
+</code>
+
+## Security
+But there's one huge issue with this setup.
