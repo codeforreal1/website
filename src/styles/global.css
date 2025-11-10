@@ -103,6 +103,7 @@ code {
   padding: 2px 5px;
   background-color: rgb(var(--gray-light));
   border-radius: 2px;
+  font-size: 0.9rem;
 }
 pre {
   padding: 1.5em;

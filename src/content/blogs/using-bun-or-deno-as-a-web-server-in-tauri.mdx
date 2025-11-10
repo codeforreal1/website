@@ -1,0 +1,97 @@
+---
+title: 'Using Bun or Deno as a web server in Tauri'
+description: "How to use a secure Bun and Deno web server with Rust and Tauri to speed up development."
+publishedDate: 'November 10 2025'
+heroImage: ../../assets/blogs/using-bun-or-deno-as-a-web-server-in-tauri.png
+---
+import { Image } from 'astro:assets';
+import ElectronMeme from "../../assets/blogs/using-bun-or-deno-as-a-web-server-in-tauri/electron-meme.png"
+import Output1 from "../../assets/blogs/using-bun-or-deno-as-a-web-server-in-tauri/output-1.png"
+
+[Tauri](https://tauri.app) is a Rust🦀 framework to build a cross-platform desktop app using Rust as a backend and webview as a frontend layer.
+Unlike Electron, Tauri does not bundle the whole Chromium browser into the final app, it uses the same native webview that the platform ships with. On MacOS, that is Safari WebKit, on Windows that is Edge WebView2 (Chromium-based) and WebKitGTK on Linux.
+This results extremely lightweight app sizes. A simple "Hello World!" app on Tauri just weighs ~2.5 MB whereas the same version on using Electron weighs ~90 MB. That is about 30x smaller app bundle compared to Electron.
+
+Tauri uses [Rust](https://rust-lang.org/) as a backend layer whereas Electron uses [Node.js](https://nodejs.org). Rust is a statically typed and compiled programming language that is known for its performance. Node.js is built on top of V8, a high performance JavaScript engine  written in C++, and libuv, a C library that manages event loop and async I/O in the program.
+But, JavaScript is a interpreted language and it manages memory via a GC heap. Rust uses ownership model to manage memory manually and has no GC. Due to this reason, Rust is highly performant compared to Node. Electron apps are profusely known for consuming too much memory footprint beside the exorbitant app size.
+
+<Image src={ElectronMeme} alt="Electron meme" style="object-fit: contain; margin: 0 auto;" />
+<br />
+But, there's one thing that I think is deterring developers in fully adopting Tauri to develop their desktop applications. And that is Rust. Let's admit it, Rust is a difficult language to learn, let alone master it.
+It has a steep learning curve and the Rust's borrow-checker trips even the seasoned developers. Of course, with the advancements of modern LLMs, that might sound irrelevant but you still need to have a good understanding of Rust to use and understand Tauri.
+While I still recommend you to use the existing Rust backend, you can actually use [Bun](https://bun.dev) or [Deno](https://deno.com) as a backend in your Tauri apps. In fact, you can even use Node or Python or any other language as a backend. But, since Bun and Deno have emerged as performant Node.js replacement focusing on consuming less memory and improve the Node.js performance bottlenecks, this blog will focus on them only.
+
+Before we start, here's the complete code for [Bun](https://github.com/niraj-khatiwada/tauri-bun) and [Deno](https://github.com/niraj-khatiwada/tauri-deno) version.
+
+### Server Setup:
+Let us first setup a simple HTTP web server in Bun:
+<code>
+```ts
+function handleCors(_: Request, res: Response) {
+  res.headers.set('Access-Control-Allow-Origin', '*')
+  res.headers.set('Access-Control-Allow-Headers', '*')
+  res.headers.set('Access-Control-Allow-Credentials', 'true')
+  return res
+}
+
+const server = Bun.serve({
+  port: 3000,
+  hostname: '127.0.0.1',
+  async fetch(req: Request) {
+    if (req.method === 'OPTIONS') {
+      return handleCors(req, new Response(null, { status: 204 }))
+    }
+
+    const url = new URL(req.url)
+    if (url.pathname === '/') {
+      return handleCors(
+        req,
+        new Response(JSON.stringify({ data: 'Hello from Bun!' })),
+      )
+    }
+    if (url.pathname === '/ping') {
+      return handleCors(req, new Response(JSON.stringify({ data: 'pong' })))
+    }
+
+    return handleCors(req, new Response('Not Found', { status: 404 }))
+  },
+})
+```
+</code>
+<br />
+Start the server using `bun dev` from the folder `apps/server`. 
+Now, let's try to connect this server from our Tauri webview. We'll be using a simple React SPA with [TanStack Router](https://tanstack.com/router/latest) as our frontend setup. You can browse the code within `apps/client`.
+
+<code>
+```ts
+function App() {
+  const { data } = useQuery({
+    queryKey: ['/'],
+    queryFn: () => fetcher('/'),
+  })
+
+  return (
+    <>
+      <div className="h-screen w-screen flex items-center justify-center flex-col">
+        <img src={Logo} alt="logo" width={200} />
+        <h1 className="text-white text-3xl font-bold">Tauri + Bun</h1>
+        <div>
+          <Link to="/dashboard" className="text-blue-500 block my-2">
+            Go to Dashboard
+          </Link>
+        </div>
+        <p className="text-white">{JSON.stringify(data, null, 2)}</p>
+      </div>
+    </>
+  )
+}
+```
+</code>
+<br />
+
+To run the client server, head over to `apps/client` and run `bun dev`.
+
+Note: Tauri requires you to use it's own HTTP client library get full potential (this is annoying actually), so the `fetcher` function you're seeing above is a custom function that I made for convenience. You can find it in `apps/client/utils/fetcher.ts`.
+
+Now, let's finally Run our Tauri app using the command `bun tauri:dev`. You should see the following output.
+<Image src={Output1} alt="Tauri Bun" style="object-fit: contain; margin: 0 auto;" />
