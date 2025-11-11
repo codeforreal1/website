@@ -402,3 +402,5 @@ The same version of the app using only Rust weighed just around ~5MB. Tauri does
 
 ## Final Thoughts
 As I said in the beginning, most of the desktop apps do not require a custom web server. In case of Tauri, the Rust-Webview IPC is pretty solid and you should aim for that most of the time. But some time a custom web server becomes a necessity regardless if you use a native Rust web server or a custom JS runtime based web server powered by Bun or Deno. A year ago I experimented on similar [concept](https://github.com/codeforreal1/Local-First-Desktop-App-Rust-NodeJS) using Node.js as a runtime web server. Today, Bun and Deno offers better single-file executable ability and efficient memory footprint and I think they're a better fit to use as a sidecar.
+
+Code: [Tauri + Bun](https://github.com/niraj-khatiwada/tauri-bun) and [Tauri + Deno](https://github.com/niraj-khatiwada/tauri-deno)
