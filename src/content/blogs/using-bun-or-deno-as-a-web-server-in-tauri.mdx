@@ -21,11 +21,11 @@ But JavaScript is an interpreted language, and it manages memory via a GC heap. 
 
 <Image src={ElectronMeme} alt="Electron meme" style="object-fit: contain; margin: 0 auto;" />
 <br />
-But, there's one thing that I think is deterring developers in fully adopting Tauri to develop their desktop applications. And that is Rust. Let's admit it, Rust is a difficult language to learn, let alone master it.
-It has a steep learning curve and the Rust's borrow-checker trips even the seasoned developers. Of course, with the advancements of modern LLMs, that might sound irrelevant but you still need to have a good understanding of Rust to use and understand Tauri.
-While I still recommend you to use the existing Rust backend, you can actually use [Bun](https://bun.dev) or [Deno](https://deno.com) as a backend in your Tauri apps. In fact, you can even use Node or Python or any other language as a backend. But, since Bun and Deno have emerged as performant Node.js replacement focusing on consuming less memory and improve the Node.js performance bottlenecks, this blog will focus on them only.
+But, there's one thing that I think is deterring developers from fully adopting Tauri to develop their desktop applications. And that is Rust. Let's admit it, Rust is a difficult language to learn, let alone master.
+It has a steep learning curve, and Rust's borrow-checker trips even seasoned developers. Of course, with the advancements of modern LLMs, that might sound irrelevant, but you still need to have a good understanding of Rust to use and understand Tauri.
+While I still recommend you to use the existing Rust backend, you can actually use [Bun](https://bun.dev) or [Deno](https://deno.com) as a backend in your Tauri apps. In fact, you can even use Node, Python, or any other language as a backend. But, since Bun and Deno have emerged as performant Node.js replacements focusing on consuming less memory and improving the Node.js performance bottlenecks, this blog will focus on them only.
 
-Before we start, here's the complete code for [Bun](https://github.com/niraj-khatiwada/tauri-bun) and [Deno](https://github.com/niraj-khatiwada/tauri-deno) version.
+Before we start, here's the complete code for [Bun](https://github.com/niraj-khatiwada/tauri-bun) and [Deno](https://github.com/niraj-khatiwada/tauri-deno) versions.
 
 ## Initial Setup:
 <p class="!mb-0 !pb-0">Let us first setup a simple HTTP web server in Bun:</p>
