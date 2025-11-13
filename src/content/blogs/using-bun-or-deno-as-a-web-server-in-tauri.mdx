@@ -13,11 +13,11 @@ import ProcessFlow from "../../assets/blogs/using-bun-or-deno-as-a-web-server-in
 import HTTPAuth from "../../assets/blogs/using-bun-or-deno-as-a-web-server-in-tauri/http-auth.png"
 
 [Tauri](https://tauri.app) is a Rust🦀 framework to build a cross-platform desktop app using Rust as a backend and webview as a frontend layer.
-Unlike Electron, Tauri does not bundle the whole Chromium browser into the final app, it uses the same native webview that the platform ships with. On MacOS, that is Safari WebKit, on Windows that is Edge WebView2 (Chromium-based) and WebKitGTK on Linux.
-This results extremely lightweight app sizes. A simple "Hello World!" app on Tauri just weighs ~2.5 MB whereas the same version on using Electron weighs ~90 MB. That is about 30x smaller app bundle compared to Electron.
+Unlike Electron, Tauri does not bundle the whole Chromium browser into the final app, it uses the same native webview that the platform ships with. On MacOS, that is Safari WebKit, on Windows, that is Edge WebView2 (Chromium-based), and WebKitGTK on Linux.
+This results in extremely lightweight app sizes. A simple "Hello World!" app on Tauri just weighs ~2.5MB, whereas the same version using Electron weighs ~90MB. That is about 30x smaller app bundle compared to Electron.
 
-Tauri uses [Rust](https://rust-lang.org/) as a backend layer whereas Electron uses [Node.js](https://nodejs.org). Rust is a statically typed and compiled programming language that is known for its performance. Node.js is built on top of V8, a high performance JavaScript engine  written in C++, and libuv, a C library that manages event loop and async I/O in the program.
-But, JavaScript is a interpreted language and it manages memory via a GC heap. Rust uses ownership model to manage memory manually and has no GC. Due to this reason, Rust is highly performant compared to Node. Electron apps are profusely known for consuming too much memory footprint beside the exorbitant app size.
+Tauri uses [Rust](https://rust-lang.org/) as a backend layer, whereas Electron uses [Node.js](https://nodejs.org). Rust is a statically typed and compiled programming language that is known for its performance. Node.js is built on top of V8, a high-performance JavaScript engine  written in C++, and libuv, a C library that manages the event loop and async I/O in the program.
+But JavaScript is an interpreted language, and it manages memory via a GC heap. Rust uses an ownership model to manage memory manually and has no GC. Due to this reason, Rust is highly performant compared to Node. Electron apps are profusely known for consuming too much memory footprint, besides the exorbitant app size.
 
 <Image src={ElectronMeme} alt="Electron meme" style="object-fit: contain; margin: 0 auto;" />
 <br />
