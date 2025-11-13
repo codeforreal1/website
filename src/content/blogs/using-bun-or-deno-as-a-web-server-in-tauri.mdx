@@ -248,16 +248,16 @@ bun tauri:build
 </code>
 
 ## Security
-But there's one huge vulnerability with this setup. The server although being embedded into the Tauri, it can still be accessed by the outside world. If you try to visit the local address that the server is running from any other browser, it'll respond you with 200 status.
-We need to only allow resolve the incoming requests only if it was triggered via our Tauri webview (or Rust backend) otherwise need to reject it. For that we need to come up with some kind of authentication between our Tauri webview and Bun server. Fortunately, there is a solution for such problem.
+But there's one huge vulnerability with this setup. The server, although being embedded into Tauri, can still be accessed by the outside world. If you try to visit the local address that the server is running from any other browser, it'll respond to you with a 200 status.
+We need to allow the incoming requests only if it was triggered via our Tauri webview (or Rust backend), otherwise we need to reject them. For that, we need to come up with some kind of authentication between our Tauri webview and Bun server. Fortunately, there is a solution for such problems.
 
 #### Solution
-What we can do is, every time our Tauri app starts, we can generate a secret key in our Rust backend and this secret key only lives within Rust process, webview and Bun server cannot have access to this secret at all (you'll later realize why). Our Tauri webview will now request a new token generated with the unique per session secret key when the frontend starts for the first time. Since Tauri webview uses secure IPC, no any other client can request this token. Now, every time we make a request to our Bun server, we send this token within the authorization headers.
-Bun server now needs to verify and confirm that these tokens are valid and requested via Tauri webview and it does the verification with the Rust backend. If the token is valid, it'll resolve the request otherwise rejects it.
+What we can do is, every time our Tauri app starts, we can generate a secret key in our Rust backend, and this secret key only lives within the Rust process, the webview and Bun server cannot have access to this secret at all (you'll later realize why). Our Tauri webview will now request a new token generated with the unique per-session secret key when the frontend starts for the first time. Since Tauri webview uses secure IPC, no other client can request this token. Now, every time we make a request to our Bun server, we send this token within the authorization headers.
+The Bun server now needs to verify and confirm that these tokens are valid and requested via the Tauri webview, and it does the verification with the Rust backend. If the token is valid, it'll resolve the request, otherwise it rejects it.
 
 <Image src={HTTPAuth} alt="HTTPAuth" style="object-fit: contain; margin: 0 auto;" />
 
-The secret key lives only in the Rust process and it is a per session key which will be destroyed when Tauri process ends. You can also create a central secret key and store it using a full encryption with [Stronghold](https://v2.tauri.app/plugin/stronghold) if you want to make sure only one instance of server runs and multiple instance of the Tauri client need to share the server. The same authentication process can be used with the Websocket connection as well.
+The secret key lives only in the Rust process, and it is a per-session key that will be destroyed when the Tauri process ends. You can also create a central secret key and store it using full encryption with [Stronghold](https://v2.tauri.app/plugin/stronghold) if you want to make sure only one instance of the server runs and multiple instances of the Tauri client need to share the server. The same authentication process can be used with the WebSocket connection as well.
 
 <p class="!mb-0">We'll go ahead and implement the authentication check in the Bun server first.</p>
 
@@ -391,16 +391,16 @@ pub fn start_server(app_handle: &AppHandle, server_port: u16){
 ```
 </code>
 
-The `fetcher` function in the frontend that I mentioned earlier automatically injects the auth token that the Tauri webview generates on the first app run so we don't need to worry about handling that.
+The `fetcher` function in the frontend that I mentioned earlier automatically injects the auth token that the Tauri webview generates on the first app run, so we don't need to worry about handling that.
 
-That's it! Every request now made to the web server must have a valid auth token that only Rust backend can generate and verify. If you now try to access the server address from your local browser, it'll get rejected.
+That's it! Every request now made to the web server must have a valid auth token that only the Rust backend can generate and verify. If you now try to access the server address from your local browser, it'll get rejected.
 
 ## App Size
-In terms of app size, for the same codebase of the web server, the single-file executable binary of Bun weighed ~60MB and the final Tauri app size was ~29MB (for .dmg in MacOS) whereas single-file executable of binary weighed ~73MB and the app size was ~36MB for the Deno version.
-The same version of the app using only Rust weighed just around ~5MB. Tauri does impressive compression while building the final release build so it's not a surprise, with even massive around 60MB of our JS runtime bundled web server code, the final app builds were just under 30MB. Compared to Electron, this is a substantially small app build sizes.
+In terms of app size, for the same codebase of the web server, the single-file executable binary of Bun weighed ~60MB, and the final Tauri app size was ~29MB (for .dmg in MacOS), whereas the single-file executable binary weighed ~73MB and the app size was ~36MB for the Deno version.
+The same version of the app, using only Rust, weighed just around ~5MB. Tauri does impressive compression while building the final release build so it's not a surprise, with even massive ~60MB of our JS runtime bundled web server code, the final app builds were just under 30MB. Compared to Electron, this is a substantially smaller app build size.
 
 
 ## Final Thoughts
-As I said in the beginning, most of the desktop apps do not require a custom web server. In case of Tauri, the Rust-Webview IPC is pretty solid and you should aim for that most of the time. But some time a custom web server becomes a necessity regardless if you use a native Rust web server or a custom JS runtime based web server powered by Bun or Deno. A year ago I experimented on similar [concept](https://github.com/codeforreal1/Local-First-Desktop-App-Rust-NodeJS) using Node.js as a runtime web server. Today, Bun and Deno offers better single-file executable ability and efficient memory footprint and I think they're a better fit to use as a sidecar.
+As I said in the beginning, most of the desktop apps do not require a custom web server. In the case of Tauri, the Rust-Webview IPC is pretty solid, and you should aim for that most of the time. But sometimes a custom web server becomes a necessity, regardless of whether you use a native Rust web server or a custom JS runtime-based web server powered by Bun or Deno. A year ago, I experimented with a similar [concept](https://github.com/codeforreal1/Local-First-Desktop-App-Rust-NodeJS) using Node.js as a runtime web server. Today, Bun and Deno offer better single-file executable ability and efficient memory footprint, and I think they're a better fit to use as a sidecar.
 
 Code: [Tauri + Bun](https://github.com/niraj-khatiwada/tauri-bun) and [Tauri + Deno](https://github.com/niraj-khatiwada/tauri-deno)
