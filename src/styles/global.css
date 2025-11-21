@@ -160,3 +160,15 @@ hr {
   font-size: 0.8rem;
   margin-bottom: 2rem;
 }
+
+.giscus{
+  max-width: 768px;
+  margin: 0 auto;
+  padding: 0 1.2rem;
+}
+
+@media screen and (min-width: 768px){
+  .giscus{
+    padding: 0;
+  }
+}
