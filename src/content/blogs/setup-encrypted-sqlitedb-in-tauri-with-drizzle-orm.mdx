@@ -1,0 +1,389 @@
+---
+title: '[DRAFT]: Setup Encrypted SQLite DB in Tauri along with Drizzle ORM'
+description: "How to setup a fully secure and encrypted SQLite DB and use Drizzle ORM to query data in Rust Tauri?"
+publishedDate: 'November 25 2025'
+heroImage: ../../assets/blogs/setup-encrypted-sqlitedb-in-tauri-with-drizzle-orm.png
+---
+import { Image } from 'astro:assets';
+
+import DBBrowser from "../../assets/blogs/setup-encrypted-sqlitedb-in-tauri-with-drizzle-orm/db-browser.png"
+import FlowChart from "../../assets/blogs/setup-encrypted-sqlitedb-in-tauri-with-drizzle-orm/flowpart.png"
+
+Recently, I had an idea to build a local offline app using a SQLite database. One major requirement for this app was to make it secure by default, i.e., the data needs to be fully encrypted. [Tauri](https://tauri.app/) has always been my go-to framework to craft new desktop apps, so I started researching the possibilities.
+Tauri supports SQLite database by default using [SQL](https://v2.tauri.app/plugin/sql/) plugin. It uses [sqlx](https://github.com/launchbadge/sqlx) under the hood, which is a robust database backend in Rust. Tauri SQL plugin also has JavaScript bindings so that you can query your database from the frontend directly as well. Sweet!
+I already had some experience with sqlx, and I can say, for our use case, it is probably the best async db toolkit out there. Our SQLite database part is solved.
+
+But there's an issue with the Tauri SQL plugin. It does not support SQLite db encryption. There's an open [issue](https://github.com/tauri-apps/plugins-workspace/issues/7) regarding this, along with an open [PR](https://github.com/tauri-apps/plugins-workspace/pull/2553) as well. 
+But the issue has been open for 3 years, so I realized we won't be getting the encryption support anytime soon in the native Tauri SQL plugin.
+Also, Tauri's SQL plugin is quite limited in terms of functionality. It does not expose any Rust bindings that you can use on the backend to interact with the database, and you're stuck with using just JS bindings. 
+There's no way to perform a database [transaction](https://github.com/tauri-apps/plugins-workspace/issues/886) from JS binding. The migration [process](https://v2.tauri.app/plugin/sql/#migrations) is hard to maintain in the long term. 
+Overall, the plugin seems to be usable for just some small projects that need a few databases. But for large projects, I think it is quite restrictive and is not a good fit for our job.
+
+The good news is, you don't have to use the Tauri SQL plugin at all. 
+Remember, Tauri uses Rust🦀 as a backend. That means you can use sqlx on your own to manage the SQLite database. And, you can use Tauri commands from the frontend to query the database. 
+This gives you full control of the database instance on the backend, and on the frontend, you can query whatever data you want, however you want. 
+Plus, since we're managing the sqlx instance ourselves, we can easily add [SQLCipher](https://www.zetetic.net/sqlcipher/), an open-source cryptographic encryption library.  
+
+### Setup
+Complete code is available [here](https://github.com/niraj-khatiwada/tauri-encrypted-sqlite-drizzle).
+
+#### SQLite DB with sqlx:
+
+<p class="my-0!">Let's first install sqlx and setup our SQLite database. In your `Cargo.toml`, add the following dependencies first. Since, sqlx is an async db toolkit, we'll go ahead and install tokio as well.<br />
+Sqlx uses `libsqlite3` under the hood for SQLite. But that library does not ship with an SQLEncypher out of the box. So we have to override the `libsqlite3-sys` driver that sqlx uses under the hood with a custom one that bundles with sqlencypher using a feature flag.</p>
+<code>
+```toml
+[dependencies]
+...
+tokio = { version = "1.48.0", features = ["macros", "rt-multi-thread"] }
+sqlx = { version = "0.8.6", default-features = false, features = [
+    "runtime-tokio-rustls",
+    "macros",
+    "sqlite",
+    "migrate",
+    "uuid",
+] }
+libsqlite3-sys = { version = "0.30.1", features = ["bundled-sqlcipher"] } # This will override the `libsqlite3-sys` shipped with sqlx
+```
+</code>
+
+<p class="my-0!">Next, we'll create a new struct to manager our database instance.</p>
+<code>
+```rust
+pub type DatabaseDialect = sqlx::Sqlite;
+pub type DatabasePool = sqlx::Pool<DatabaseDialect>;
+
+pub struct Database {
+    db_dir: PathBuf,
+    db_name: String,
+    pool: DatabasePool,
+}
+
+impl Database {
+    pub const DEFAULT_DB_NAME: &'static str = "app.db";
+
+    pub async fn new(
+        password: &str,
+        db_dir: PathBuf,
+        db_name: Option<&str>,
+    ) -> Result<Self, String> {
+        let db_name = db_name.unwrap_or(Self::DEFAULT_DB_NAME);
+        let db_url = db_dir.join(db_name);
+
+        let connect_options =
+            SqliteConnectOptions::from_str(&db_url.to_str().ok_or("Invalid db path")?)
+                .pragma("key", password.to_string()) // This is very important.
+                .map_err(|err| err.to_string())?
+                .create_if_missing(true);
+
+        let pool = SqlitePoolOptions::new()
+            .connect_with(connect_options)
+            .await
+            .map_err(|err| err.to_string())?;
+
+        Migration::setup_migration_table(&pool)
+            .await
+            .map_err(|err| err.to_string())?;
+
+        Ok(Self {
+            pool: pool,
+            db_dir: db_dir,
+            db_name: String::from(db_name),
+        })
+    }
+}
+```
+</code>
+Since SQLite is just a single file, we'll need to provide a directory where this database will be stored. We'll use Tauri's [app data directory](https://v2.tauri.app/reference/javascript/api/namespacepath/#appdatadir) to store it. 
+For the encryption to work, you must pass a new `PRAGMA` attribute with name `key` to your SQLite connection options. The password field you're seeing here is a key that'll be used to encrypt your data.
+
+<p class="my-0!">Next, let's create a Tauri app state to hold this db pool for the entirety of our app cycle.</p>
+<code>
+```rust
+pub struct AppState {
+    pub db: Arc<RwLock<Option<Database>>>,
+    pub db_dir: PathBuf,
+}
+```
+</code>
+<p class="my-0!">We'll now instantiate the database in our Tauri entry file and run the app.</p>
+<code>
+```rust
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
+pub fn run() {
+    tauri::Builder::default()
+        .plugin(tauri_plugin_fs::init())
+        .setup(|app| {
+            let db_dir = fs::setup_db_dir(app).unwrap_or_else(|err| panic!("{}", err)); // You'll need this path to access your db.
+
+            let db = tauri::async_runtime::block_on(db::Database::new(
+                "super_secret_password", // We'll later ask this from the user on frontend
+                db_dir.clone(),
+            ))
+            .unwrap_or_else(|err| panic!("{}", err));
+
+            let app_state = AppState {
+                db: Arc::new(RwLock::new(Some(db))),
+                db_dir: db_dir,
+            };
+            app.manage(app_state);
+            Ok(())
+        })
+        .build(tauri::generate_context!())
+        .expect("error while running tauri application")
+        .run(|_app_handle, _event| {});
+}
+```
+</code>
+
+<p class="my-0!">Your database is now ready to use. At any point of your app, you can use this connection pool to query your database. Let's test it out by creating a simple test table.</p>
+<code>
+```rust
+#[tauri::command]
+pub async fn create_test_table(app_state: tauri::State<'_, AppState>) -> Result<(), String> {
+    let db_ref = app_state.db.read().await;
+    let db = db_ref
+        .as_ref()
+        .ok_or("Database not initialized".to_string())?;
+
+    let query = sqlx::query("CREATE TABLE IF NOT EXISTS test(id INTEGER PRIMARY KEY AUTOINCREMENT);");
+    query.execute(db.get_pool()).await.map_err(|e| e.to_string())?;
+    Ok(())
+} 
+```
+</code>
+
+Since your SQLite database is fully encrypted, you won't be able to easily view/browse the data using your favorite database client or IDE. We'll need a special database client that supports browsing an SQL-encrypted database. 
+[DB Browser for SQLite](https://sqlitebrowser.org/) supports this out of the box. Go to the specific folder printed by `db_dir` variable and open the `app.db` SQL file inside that folder using DB Browser. It'll ask you for the encryption key. Provide the super secret encryption key you used above, and voila, you'll now be able to browse all the data.
+
+<Image src={DBBrowser} alt="DBBrowser" style="object-fit: contain; margin: 0 auto;" />
+
+<br />
+Your fully encrypted SQLite database is now complete and ready to be used both on the backend and frontend. I can definitely use this setup to build the local offline app that I talked about in the first place.
+
+But what if I tell you that you can use [Drizzle ORM](https://orm.drizzle.team/) with this current setup to query data from the frontend much easily. On top of that, you can use [Drizzle Kit](https://orm.drizzle.team/docs/kit-overview) to create and manage SQL migrations automatically🪄, no need to write migrations manually. Yes, you read those right!
+
+### Drizzle ORM
+One cumbersome process (in the frontend only) that you'll quickly realize when you use the above sqlx-only setup is that you have to create lots of Tauri commands to query the database from the frontend. 
+While you can create a single Tauri command that takes the SQL query and parameters, and sqlx will parse those to execute against the database and return the result, you still wind up writing a lot of hardcoded string SQL. 
+While many hardcore SQL fans like to raw-dog the string SQL, I prefer using an ORM. Type-safe ORM like Drizzle helps us to manage the tables, queries, migrations, etc. in a large project.
+
+<Image src={FlowChart} alt="FlowChart" style="object-fit: contain; margin: 0 auto;" />
+<br />
+Drizzle has a feature called [Drizzle Proxy](https://orm.drizzle.team/docs/connect-drizzle-proxy) that allows you to implement your own version of driver communication with the database. 
+Imagine Drizzle is just a HTTP client which calls the database using a URL along with the SQL query and params and after getting the results back from the database, Drizzle maps the result into its own interface. 
+
+<p class="my-0!">Let's install Drizzle dependencies first:</p>
+<code>
+```sh
+bun add drizzle-orm;
+bun add -D drizzle-kit;
+```
+</code>
+
+#### Initialize DB client:
+<p class="my-0!">Drizzle expects a specific response interface signature. You can find those interface examples in Drizzle Proxy [docs](https://orm.drizzle.team/docs/connect-drizzle-proxy).</p>
+<code>
+```ts
+type Row = {
+  columns: string[]
+  rows: string[]
+}
+
+type Method = 'run' | 'all' | 'values' | 'get'
+
+export const db = drizzle(
+  async (sql, params, method) => {
+    const rows = await invoke<Row[]>('execute_single_sql', {
+      query: { sql, params },
+    })
+    return mapRows(rows, method)
+  },
+  async (
+    queries: {
+      sql: string
+      params: any[]
+      method: Method
+    }[],
+  ) => {
+    const batchRows = await invoke<Row[][]>('execute_batch_sql', {
+      queries,
+    })
+    return batchRows.map((rows, index) => {
+      const query = queries[index]
+      return mapRows(rows, query.method)
+    })
+  },
+  {
+    schema,
+    logger: import.meta.env.DEV,
+  },
+)
+```
+</code>
+
+<p class="my-0!">The first parameter for the drizzle client instantiation runs when we execute single SQL statements like SELECT, INSERT, UPDATE, DELETE, DROP, etc. And the second one executes for [batch](https://orm.drizzle.team/docs/batch-api) statements that need to execute within a transaction. The third parameter is for drizzle related config.
+The `execute_single_sql` and `execute_batch_sql` that you see here are two Tauri commands that'll be invoked as a part of the proxy. Those commands will call our sqlx to query the actual database and return the result.</p>
+
+<code>
+```rust
+
+#[tauri::command]
+pub async fn execute_single_sql(
+    app_state: tauri::State<'_, AppState>,
+    query: SQLQuery,
+) -> Result<Vec<SQLRow>, String> {
+    let db_ref = app_state.db.read().await;
+    let db = db_ref
+        .as_ref()
+        .ok_or("Database not initialized".to_string())?;
+
+    let mut q = sqlx::query(query.sql.as_str());
+    q = bind_params(q, &query.params);
+
+    let rows = q.fetch_all(&db.pool).await.map_err(|e| e.to_string())?;
+
+    Ok(rows.iter().map(row_to_sql_row).collect())
+}
+
+#[tauri::command]
+pub async fn execute_batch_sql(
+    app_state: tauri::State<'_, AppState>,
+    queries: Vec<SQLQuery>,
+) -> Result<Vec<Vec<SQLRow>>, String> {
+    let db_ref = app_state.db.read().await;
+    let db = db_ref
+        .as_ref()
+        .ok_or("Database not initialized".to_string())?;
+
+    let mut tx: Transaction<'_, Sqlite> = db.pool.begin().await.map_err(|e| e.to_string())?;
+
+    let mut results: Vec<Vec<SQLRow>> = vec![];
+
+    for query in queries {
+        let mut q = sqlx::query(query.sql.as_str());
+        q = bind_params(q, &query.params);
+
+        let rows = q
+            .fetch_all(&mut *tx)
+            .await
+            .map_err(|e| format!("Error executing '{}': {}", query.sql, e))?;
+
+        let converted: Vec<SQLRow> = rows.iter().map(row_to_sql_row).collect();
+        results.push(converted);
+    }
+
+    tx.commit().await.map_err(|e| e.to_string())?;
+
+    Ok(results)
+}
+```
+</code>
+<br />
+The above code basically queries the database using the SQL query string and parameters provided by Drizzle. After executing the statement, the response is mapped in an interface that Drizzle expects and returned.
+
+#### Migrations:
+<p class="my-0!">Drizzle supports code-first schema which basically means, we define everything related to our database schema using Drizzle TypeScript code.
+It will then store snapshot of our database config on every migration and compares the diff on the next migration. This diff will helps Drizzle to generate auto-migration files. It's really powerful, you can read those in depth [here](https://orm.drizzle.team/docs/migrations).
+Let's add a simple `todo` table schema to generate our first migration file using Drizzle Kit.</p>
+
+<code>
+```ts
+import { sql } from 'drizzle-orm'
+import { sqliteTable, text } from 'drizzle-orm/sqlite-core'
+import { v4 as uuid } from 'uuid'
+
+const todo = sqliteTable('todo', {
+  id: text().primaryKey().$defaultFn(() => uuid()),
+  title: text('title').notNull(),
+  description: text('description'),
+  created_at: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+  updated_at: text('updated_at').default(sql`CURRENT_TIMESTAMP`).$onUpdate(() => sql`CURRENT_TIMESTAMP`),
+})
+
+export default todo
+```
+</code>
+
+<p class="my-0!">Now, let's create our first migration.</p>
+<code>
+```sh
+bun drizzle-kit generate
+```
+</code>
+<p class="my-0!">This will create the required SQL statements automatically.</p>
+<code>
+```sql
+CREATE TABLE `todo` (
+	`id` text PRIMARY KEY NOT NULL,
+	`title` text NOT NULL,
+	`description` text,
+	`created_at` text DEFAULT CURRENT_TIMESTAMP,
+	`updated_at` text DEFAULT CURRENT_TIMESTAMP
+);
+```
+</code>
+
+<p class="mb-0!">But these migrations cannot be applied using Drizzle Kit. Remember, Drizzle Kit is a Node.js CLI application. The `bun drizzle-kit ...` command only runs within a Node.js runtime.
+Also, notice that you need to run these migration files on a user's device that has the desktop app installed. Fortunately, we can easily run these migrations using sqlx on the backend.</p>
+<code>
+```rust
+pub struct Migration {
+    pool: DatabasePool,
+    migrations_dir: PathBuf,
+}
+
+impl Migration {
+    pub const MIGRATION_TABLE_NAME: &'static str = "__migration__";
+
+    pub fn new(pool: DatabasePool, migrations_dir: PathBuf) -> Self {
+        Self { pool, migrations_dir }
+    }
+
+    pub async fn run(&self) -> Result<(), String> {
+        println!("[migration] Running SQL migrations.");
+        Self::setup_migration_table(&self.pool).await?;
+
+        let migration_files = self.get_migration_files()?;
+        for file in migration_files {
+            let file_name = file.clone();
+            let sql = fs::read_to_string(format!(
+                "{}/{}",
+                self.migrations_dir.to_string_lossy().to_string(),
+                file
+            ))
+            .map_err(|e| format!("Failed to read migration {}: {}", file, e))?;
+
+            if self.is_migration_applied(&file_name).await? {
+                continue;
+            }
+            println!("[migration] Applying migration: {}", file_name);
+            if let Err(err) = self.apply_migration(&file_name, &sql).await {
+                println!(
+                    "[migration] Migration failed: {}\nError: {}",
+                    file_name, err
+                );
+                return Err(err);
+            }
+            println!("[migration] Migration applied: {}", file_name);
+        }
+        Ok(())
+    }
+    ...
+}
+```
+</code>
+<br/>
+The `Migration` struct has several other methods that basically read the migrations file in order of their creation, check if those migrations have been applied or not, apply pending migrations, and record them within the migration metadata table. Desktop apps do not require undo migrations, so we only account for forward migrations.
+
+<p class="my-0!">When you run your app, the migration will be applied automatically.
+Now, we can interact with the database to insert and grab some todos.</p>
+<code>
+```ts
+await db.insert(todo).values({ title: "Finish this blog..." });
+await db.query.todo.findMany();
+```
+</code>
+
+#### Caveats
+Drizzle transactions using the interface `db.transaction(async tx => {...})` does not work.

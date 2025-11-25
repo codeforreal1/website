@@ -6,9 +6,11 @@ import { SITE_TITLE, SITE_DESCRIPTION } from "../../consts";
 import { getCollection } from "astro:content";
 import BlogPostCard from "../../components/blog/BlogPostCard.astro";
 
-const blogPosts = (await getCollection("blogs")).sort(
-  (a, b) => +new Date(b.data.publishedDate) - +new Date(a.data.publishedDate)
-);
+const blogPosts = (await getCollection("blogs"))
+  .filter((post) => !post.data.title.toLowerCase().startsWith("[draft]"))
+  .sort(
+    (a, b) => +new Date(b.data.publishedDate) - +new Date(a.data.publishedDate),
+  );
 ---
 
 <!doctype html>

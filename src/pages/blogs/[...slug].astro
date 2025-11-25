@@ -5,10 +5,12 @@ import { render } from "astro:content";
 
 export async function getStaticPaths() {
   const posts = await getCollection("blogs");
-  return posts.map((post) => ({
-    params: { slug: post.id },
-    props: post,
-  }));
+  return posts
+    .filter((post) => !post.data.title.toLowerCase().startsWith("[draft]"))
+    .map((post) => ({
+      params: { slug: post.id },
+      props: post,
+    }));
 }
 type Props = CollectionEntry<"blogs">;
 
