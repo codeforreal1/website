@@ -1,5 +1,5 @@
 ---
-title: '[DRAFT]: Setup Encrypted SQLite DB in Tauri along with Drizzle ORM'
+title: 'Setup Encrypted SQLite DB in Tauri along with Drizzle ORM'
 description: "How to setup a fully secure and encrypted SQLite DB and use Drizzle ORM to query data in Rust Tauri?"
 publishedDate: 'November 25 2025'
 heroImage: ../../assets/blogs/setup-encrypted-sqlitedb-in-tauri-with-drizzle-orm.png
@@ -385,5 +385,14 @@ await db.query.todo.findMany();
 ```
 </code>
 
-#### Caveats
-Drizzle transactions using the interface `db.transaction(async tx => {...})` does not work.
+#### Caveats with Drizzle
+Drizzle transactions using the API [`db.transaction(async tx => {...})`](https://orm.drizzle.team/docs/transactions) do not work at the moment. The Drizzle Proxy sends each transaction SQL statement as a single query, which invokes the `execute_single_sql` command, but our sqlx backend has no idea about the transaction context for the given statement spawned by Drizzle.
+As a solution, we can use the Drizzle [batch](https://orm.drizzle.team/docs/batch-api) API to perform the transaction since batch statements are executed on a single transaction context. For complex transaction logic, I would suggest that you create a custom Tauri command that leverages the sqlx [transactions API](https://docs.rs/sqlx-core/latest/sqlx_core/transaction/struct.Transaction.html) directly.
+
+There you go, folks! Our fully encrypted SQLite database with sqlx and Drizzle setup in Tauri is now ready to be used to build awesome desktop apps of your desire.
+This setup gives you full control over both backend and frontend. With added DX of Drizzle, you'll be able to interact with the database directly from the frontend, avoiding the hassle of creating multiple Tauri commands. Plus, Drizzle Kit automatically generates the database schema migration, so you don't have to worry about manually creating the migration files.
+I have used all the goodies that I've discussed above to create a basic ToDo(🙄 yet another ToDo app) app that shows you how to let the user have their own encryption key.
+
+GitHub Repo: https://github.com/niraj-khatiwada/tauri-encrypted-sqlite-drizzle
+
+If you have any questions, feel free to drop a comment below👇. Happy hacking!
