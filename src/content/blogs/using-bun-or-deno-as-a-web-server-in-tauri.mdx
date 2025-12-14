@@ -7,10 +7,15 @@ heroImage: ../../assets/blogs/using-bun-or-deno-as-a-web-server-in-tauri.png
 import { Image } from 'astro:assets';
 import ElectronMeme from "../../assets/blogs/using-bun-or-deno-as-a-web-server-in-tauri/electron-meme.png"
 import Output1 from "../../assets/blogs/using-bun-or-deno-as-a-web-server-in-tauri/output-1.png"
+import Output2 from "../../assets/blogs/using-bun-or-deno-as-a-web-server-in-tauri/output-2.png"
 import Compile from "../../assets/blogs/using-bun-or-deno-as-a-web-server-in-tauri/compile.png"
 import SidecarSpawn from "../../assets/blogs/using-bun-or-deno-as-a-web-server-in-tauri/sidecar-spawn.png"
 import ProcessFlow from "../../assets/blogs/using-bun-or-deno-as-a-web-server-in-tauri/process.png"
+import ProcessFlowV2 from "../../assets/blogs/using-bun-or-deno-as-a-web-server-in-tauri/process-v2.png"
 import HTTPAuth from "../../assets/blogs/using-bun-or-deno-as-a-web-server-in-tauri/http-auth.png"
+
+> <p class="text-purple-500 m-0! p-0!">IMPORTANT</p>
+> <p>I've found a better way to communicate between Bun server and Tauri client using bi-directional RPC system that requires zero extra Rust code and also completely eliminates the requirement for authorization for security. It is available on branch [v2](https://github.com/niraj-khatiwada/tauri-bun/tree/v2) in GitHub Repo. Please skip to [this](#v2) section to read the newer implementation detail.</p>
 
 [Tauri](https://tauri.app) is a Rust🦀 framework to build a cross-platform desktop app using Rust as a backend and webview as a frontend layer.
 Unlike Electron, Tauri does not bundle the whole Chromium browser into the final app, it uses the same native webview that the platform ships with. On MacOS, that is Safari WebKit, on Windows, that is Edge WebView2 (Chromium-based), and WebKitGTK on Linux.
@@ -403,4 +408,141 @@ The same version of the app, using only Rust, weighed just around ~5MB. Tauri do
 ## Final Thoughts
 As I said in the beginning, most of the desktop apps do not require a custom web server. In the case of Tauri, the Rust-Webview IPC is pretty solid, and you should aim for that most of the time. But sometimes a custom web server becomes a necessity, regardless of whether you use a native Rust web server or a custom JS runtime-based web server powered by Bun or Deno. A year ago, I experimented with a similar [concept](https://github.com/codeforreal1/Local-First-Desktop-App-Rust-NodeJS) using Node.js as a runtime web server. Today, Bun and Deno offer better single-file executable ability and efficient memory footprint, and I think they're a better fit to use as a sidecar.
 
-Code: [Tauri + Bun](https://github.com/niraj-khatiwada/tauri-bun) and [Tauri + Deno](https://github.com/niraj-khatiwada/tauri-deno)
+<section id="v2">
+# Update: Version 2 with Bi-Directional RPC
+Recently, I discovered a brand new RPC library called [kkrpc](https://docs.kkrpc.kunkun.sh/) that handles RPC connection across various environments like `http`, `websocket`, `stdio`, `web worker`, `iframe`, etc. It also has a first-class support for [Tauri](https://docs.kkrpc.kunkun.sh/examples/tauri/).
+With this new setup, we don't even need any extra Rust code at all and also eliminates the need for authorization, compared to what we did in earlier setup.
+Furthermore, it is bi-directional so it just acts like a WebSocket server. It is very easy to setup and results in a fully typed bi-directional APIs between server and client.
+<Image src={ProcessFlowV2} alt="ProcessFlowV2" style="object-fit: contain; margin: 0 auto;" />
+
+### Server setup:
+<p class="m-0! p-0!">We'll first create some basic APIs and initialize our RPC channel in our server first.</p>
+<code>
+```ts
+import { BunIo, RPCChannel } from 'kkrpc'
+
+import { api as serverApi } from './api'
+import { type API as ServerApi } from './types/api'
+import { type API as ClientApi } from '../../client/src/types/api'
+
+const stdio = new BunIo(Bun.stdin.stream())
+export const rpc = new RPCChannel<ServerApi, ClientApi>(stdio, {
+  expose: serverApi,
+})
+
+// biome-ignore lint/suspicious/noConsole: <>
+console.log(`Bun server is running.`)
+```
+</code>
+
+<p class="m-0! p-0!">Here, we've initialized our bi-directional Bun RPC server via Bun stdin/stdout stream as a channel. The `ServerApi` and `ClientApi` are just server and client API interfaces for type hints. I've created some simple server APIs for this demo.</p>
+<code>
+```ts
+import type { API as ServerApi } from '../types/api'
+
+export const api: ServerApi = {
+  add: async (a: number, b: number) => a + b,
+}
+
+```
+</code>
+
+### Client Setup:
+<p class="m-0! p-0!">Now, let's setup the RPC connection in our Tauri webview client. We'll initiate it in our root `router.tsx` to ensure that the RPC connection is live before our frontend mounts.</p>
+<code>
+```ts
+// router.tsx
+import { Command } from '@tauri-apps/plugin-shell'
+import { RPCChannel, TauriShellStdio } from 'kkrpc/browser'
+import ReactDOM from 'react-dom/client'
+
+import { api as clientApi } from './api'
+import { type API as ClientApi } from './types/api'
+import { type API as ServerApi } from '../../server/src/types/api'
+
+export type RouterContext = {
+  serverApi: ServerApi
+}
+
+//  Start the server
+const cmd = Command.sidecar('bin/tauri-bun-sidecar')
+const process = await cmd.spawn()
+const stdio = new TauriShellStdio(cmd.stdout, process)
+const channel = new RPCChannel<ClientApi, ServerApi>(stdio, {
+  expose: clientApi,
+})
+const serverApi = channel.getAPI()
+
+const router = createRouter({
+  routeTree,
+  defaultPreload: 'intent',
+  context: { serverApi } as RouterContext,
+})
+
+const rootElement = document.getElementById('app')!
+if (!rootElement.innerHTML) {
+  const root = ReactDOM.createRoot(rootElement)
+  root.render(<RouterProvider router={router} />)
+}
+
+```
+</code>
+<p class="m-0! py-0!">Here're we've initialized our RPC connection with our Bun RPC channel via Tauri Sidecar. After the connection is established over the bi-directional channel, we're passing the api instance `serverApi` as a global router context.
+Now, we can use this RPC connection to call our server API anywhere in our React app.</p>
+<code>
+```
+const result = await serverApi.add(1,2)
+// 3
+```
+</code>
+### Communication between Rust and Bun Server
+<p class="my-0!">Right now, Tauri webview can communicate with Rust backend and with Bun server as well. But, there's no direct way for Bun server to communicate with Rust backend.
+But, there's a way to communicate with Rust at any point in Bun server via Tauri commands, thanks to bi-directional RPC channel.
+Let's add a simple Tauri command.</p>
+<code>
+```rust
+#[tauri::command]
+pub fn my_custom_command() -> String {
+    "Hello Bun!".to_string()
+}
+```
+</code>
+<p class="my-0!">Now, let's add an API to call this command from Tauri webview client.</p>
+<code>
+```ts
+import { core } from '@tauri-apps/api'
+
+import { API as ClientApi } from '~/types/api'
+
+export const api: ClientApi = {
+  async askRust() {
+    return await core.invoke<Promise<string>>('my_custom_command')
+  },
+}
+```
+</code>
+<p class="my-0!">Finally, we can now call this client API easily at any point in our Bun server.</p>
+<code>
+```ts
+import { rpc as serverRpc } from '..'
+import type { API as ServerApi } from '../types/api'
+
+export const api: ServerApi = {
+  add: async (a: number, b: number) => a + b,W
+  tasks: {
+    async task1() {
+      const clientApi = serverRpc.getAPI() // Access the client API
+      const result = await clientApi.askRust() // This will call Rust backend and get the result.
+      return `Bun got this message from Rust: "${result}"`
+    },
+  },
+}
+```
+</code>
+<Image src={Output2} alt="Tauri Bun RPC" style="object-fit: contain; margin: 0 auto;" />
+</section>
+<br />
+
+<p class="my-0!">Code: <i>Please switch to branch `v2` for RPC based setup.</i></p>
+<br />
+<p class="my-0!">[Tauri + Bun](https://github.com/niraj-khatiwada/tauri-bun) and [Tauri + Deno](https://github.com/niraj-khatiwada/tauri-deno)</p>
