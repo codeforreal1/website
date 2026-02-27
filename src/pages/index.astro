@@ -8,7 +8,7 @@ import Image from "astro/components/Image.astro";
 import CodeForRealImage from "../assets/codeforreal.png";
 import BlogPostCard from "../components/blog/BlogPostCard.astro";
 import type { Project } from "../types/project";
-import CompressOImage from "../assets/compresso.png";
+import CompressOImage from "../assets/compresso.jpg";
 import UltimateNestjsBoilerplateImage from "../assets/ultimate-nestjs-boilerplate.png";
 import ProjectCard from "../components/ProjectCard.astro";
 import OGImage from "../assets/og.jpg";
@@ -22,7 +22,7 @@ const recentBlogPosts = (await getCollection("blogs"))
 const openSourceProjects: Project[] = [
   {
     title: "CompressO",
-    url: "https://github.com/codeforreal1/compressO",
+    url: "https://compresso.codeforreal.com",
     description:
       "CompressO (🔉 pronounced like 'Espresso' ) is a free and open-sourced cross-platform video compression app powered by FFmpeg. Available for Linux, Windows & MacOS.",
     heroImage: CompressOImage,
