@@ -6,6 +6,7 @@ import Footer from "../components/Footer.astro";
 import { SITE_TITLE, SITE_DESCRIPTION } from "../consts";
 import Image from "astro/components/Image.astro";
 import CodeForRealImage from "../assets/codeforreal.png";
+import DiffyImage from "../assets/diffy.png";
 import BlogPostCard from "../components/blog/BlogPostCard.astro";
 import type { Project } from "../types/project";
 import CompressOImage from "../assets/compresso.jpg";
@@ -49,6 +50,16 @@ const openSourceProjects: Project[] = [
       "Grafana",
       "AWS",
     ],
+  },
+  {
+    title: "Diffy",
+    url: "https://diffy.codeforreal.com/",
+    description:
+      "An advanced diff viewer powered by @pierre/diffs. The app is a PWA & works completely offline on any platform.",
+    heroImage: DiffyImage,
+    starsUrl:
+      "https://img.shields.io/github/stars/niraj-khatiwada/diffy?style=social",
+    tags: ["TypeScript", "React", "TanStack Router", "Vite"],
   },
 ];
 ---
